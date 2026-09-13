@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#070E0C">
+<title>AeroAlga BDPA-v2 · Node-01</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070e0c;
+    --surface:#0f1913;
+    --surface-2:#142019;
+    --border:#213026;
+    --border-soft:#1a2620;
+    --text:#e7f3ea;
+    --muted:#7e9c8c;
+    --muted-dim:#5a7267;
+    --lime:#a6ff4d;
+    --lime-dim:#5c7a3a;
+    --cyan:#3fe8d4;
+    --warn:#ffb454;
+    --danger:#ff6b5e;
+  }
+  *{-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);
+    overscroll-behavior-y:none;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'IBM Plex Mono',monospace;}
+
+  .bg-noise{
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(166,255,77,0.05), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(63,232,212,0.05), transparent 40%);
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+  }
+  .card-inset{
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:14px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .hairline{ border-top:1px solid var(--border-soft); }
+
+  /* live pulse dot */
+  .pulse-dot{ position:relative; width:8px; height:8px; border-radius:50%; background:var(--lime); }
+  .pulse-dot::after{
+    content:'';
+    position:absolute; inset:-6px;
+    border-radius:50%;
+    border:1px solid var(--lime);
+    animation:pulseRing 1.8s cubic-bezier(0.2,0.6,0.4,1) infinite;
+  }
+  @keyframes pulseRing{
+    0%{ transform:scale(0.5); opacity:0.9; }
+    80%{ transform:scale(2.2); opacity:0; }
+    100%{ opacity:0; }
+  }
+
+  /* flow schematic: traveling dash along dotted pipe */
+  .flow-track{
+    position:relative;
+    height:2px;
+    background-image:linear-gradient(to right, var(--border-soft) 0 6px, transparent 6px 12px);
+    background-size:12px 2px;
+    background-repeat:repeat-x;
+  }
+  .flow-runner{
+    position:absolute; top:-3px; width:8px; height:8px; border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 8px 1px rgba(63,232,212,0.7);
+    animation:flowMove 2.4s linear infinite;
+  }
+  @keyframes flowMove{
+    0%{ left:0%; opacity:0; }
+    8%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ left:100%; opacity:0; }
+  }
+  .flow-runner.slow{ animation-duration:3.6s; }
+
+  /* radial efficiency ring */
+  .ring-wrap{ position:relative; width:104px; height:104px; }
+  .ring-wrap svg{ transform:rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--border-soft); stroke-width:7; }
+  .ring-value{ fill:none; stroke-linecap:round; stroke-width:7; transition:stroke-dashoffset 0.6s ease; }
+
+  /* range bar for bio-grid safe zones */
+  .range-track{ position:relative; height:6px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); overflow:visible; }
+  .range-safe{ position:absolute; top:0; bottom:0; background:rgba(166,255,77,0.16); border-radius:99px; }
+  .range-marker{ position:absolute; top:50%; width:11px; height:11px; border-radius:50%; transform:translate(-50%,-50%); border:2px solid var(--bg); box-shadow:0 0 0 1px var(--border-soft); }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    height:6px; border-radius:99px;
+    background:linear-gradient(to right, var(--lime) 0%, var(--lime) var(--fill,50%), var(--border-soft) var(--fill,50%), var(--border-soft) 100%);
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:26px; height:26px; border-radius:50%;
+    background:var(--bg);
+    border:3px solid var(--lime);
+    box-shadow:0 0 12px rgba(166,255,77,0.45);
+    cursor:pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:26px; height:26px; border-radius:50%;
+    background:var(--bg); border:3px solid var(--lime);
+    box-shadow:0 0 12px rgba(166,255,77,0.45); cursor:pointer;
+  }
+
+  .toggle{ width:52px; height:30px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); position:relative; transition:background 0.25s ease, border-color 0.25s ease; }
+  .toggle .knob{ position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:var(--muted-dim); transition:left 0.25s ease, background 0.25s ease; }
+  .toggle.on{ background:rgba(166,255,77,0.14); border-color:var(--lime-dim); }
+  .toggle.on .knob{ left:24px; background:var(--lime); box-shadow:0 0 10px rgba(166,255,77,0.5); }
+
+  ::-webkit-scrollbar{ display:none; }
+  .tap{ min-height:44px; }
+
+  .flash{ animation:flashUpdate 0.5s ease; }
+  @keyframes flashUpdate{ 0%{ opacity:0.45; } 100%{ opacity:1; } }
+
+  .skeleton{
+    background:linear-gradient(100deg, var(--surface-2) 30%, var(--border-soft) 45%, var(--surface-2) 60%);
+    background-size:220% 100%;
+    animation:shimmer 1.3s ease-in-out infinite;
+  }
+  @keyframes shimmer{ 0%{ background-position:140% 0; } 100%{ background-position:-40% 0; } }
+
+  #boot-screen{ transition:opacity 0.5s ease; }
+</style>
+</head>
+<body class="bg-noise min-h-screen pb-10">
+
+<!-- BOOT / LOADING SCREEN -->
+<div id="boot-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center" style="background:var(--bg);">
+  <div class="ring-wrap mb-5">
+    <svg width="104" height="104" viewBox="0 0 104 104">
+      <circle class="ring-track" cx="52" cy="52" r="45"></circle>
+      <circle id="boot-ring" class="ring-value" cx="52" cy="52" r="45" stroke="#a6ff4d"
+        stroke-dasharray="282.7" stroke-dashoffset="282.7"></circle>
+    </svg>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <i data-lucide="dna" class="w-8 h-8" style="color:var(--lime);"></i>
+    </div>
+  </div>
+  <p class="font-mono text-xs tracking-widest" style="color:var(--muted);">ESTABLISHING LINK — NODE-01</p>
+  <p id="boot-pct" class="font-mono text-[11px] mt-1" style="color:var(--muted-dim);">0%</p>
+</div>
+
+<div id="app" class="max-w-md mx-auto px-4 opacity-0" style="transition:opacity 0.5s ease;">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 pt-4 pb-3 -mx-4 px-4" style="background:linear-gradient(var(--bg) 78%, transparent); backdrop-filter:blur(6px);">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-semibold text-[17px] leading-tight">AeroAlga BDPA-v2</h1>
+        <p class="eyebrow mt-0.5">NODE-01 · BIO-DIGITAL PERFORMANCE ARCHITECTURE</p>
+      </div>
+      <div class="flex items-center gap-1.5 card-inset px-2.5 py-1.5">
+        <span class="pulse-dot"></span>
+        <span class="font-mono text-[11px]" style="color:var(--lime);">LIVE</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 mt-3">
+      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
+        <i data-lucide="wind" class="w-4 h-4 shrink-0" style="color:var(--cyan);"></i>
+        <div class="min-w-0">
+          <p class="eyebrow">Flow Rate</p>
+          <p id="hdr-flow" class="font-mono text-sm font-medium">— L/min</p>
+        </div>
+      </div>
+      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
+        <i data-lucide="timer" class="w-4 h-4 shrink-0" style="color:var(--cyan);"></i>
+        <div class="min-w-0">
+          <p class="eyebrow">Runtime</p>
+          <p id="hdr-runtime" class="font-mono text-sm font-medium">—</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="space-y-4 mt-1">
+
+    <!-- PM CARD -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Particulate Filtration</p>
+          <h2 class="font-display font-semibold text-[15px] mt-0.5">PM2.5 / PM10</h2>
+        </div>
+        <i data-lucide="filter" class="w-4 h-4" style="color:var(--muted);"></i>
+      </div>
+
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div class="card-inset px-3 py-2.5">
+          <p class="eyebrow">Inlet</p>
+          <p id="pm25-in" class="font-mono text-lg font-medium mt-0.5">—</p>
+          <p class="font-mono text-[10px]" style="color:var(--muted-dim);">µg/m³ PM2.5</p>
+        </div>
+
+        <div class="ring-wrap !w-16 !h-16 shrink-0">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="ring-track" cx="32" cy="32" r="26" stroke-width="5"></circle>
+            <circle id="pm-ring" class="ring-value" cx="32" cy="32" r="26" stroke-width="5"
+              stroke="#a6ff4d" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="pm-eff" class="font-mono text-[13px] font-semibold" style="color:var(--lime);">—</span>
+          </div>
+        </div>
+
+        <div class="card-inset px-3 py-2.5 text-right">
+          <p class="eyebrow">Outlet</p>
+          <p id="pm25-out" class="font-mono text-lg font-medium mt-0.5">—</p>
+          <p class="font-mono text-[10px]" style="color:var(--muted-dim);">µg/m³ PM2.5</p>
+        </div>
+      </div>
+
+      <div class="flow-track my-3">
+        <span class="flow-runner"></span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex items-center justify-between card-inset px-3 py-2">
+          <span class="eyebrow">PM10 in</span>
+          <span id="pm10-in" class="font-mono text-xs">—</span>
+        </div>
+        <div class="flex items-center justify-between card-inset px-3 py-2">
+          <span class="eyebrow">PM10 out</span>
+          <span id="pm10-out" class="font-mono text-xs">—</span>
+        </div>
+      </div>
+
+      <p class="font-mono text-[10px] mt-3 leading-relaxed" style="color:var(--muted-dim);">
+        η_PM = ((PM_in − PM_out) / PM_in) × 100 = <span id="pm-formula" style="color:var(--muted);">—</span>
+      </p>
+    </section>
+
+    <!-- CO2 CARD -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Gaseous Exchange</p>
+          <h2 class="font-display font-semibold text-[15px] mt-0.5">CO₂ Fixation</h2>
+        </div>
+        <i data-lucide="leaf" class="w-4 h-4" style="color:var(--muted);"></i>
+      </div>
+
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div class="card-inset px-3 py-2.5">
+          <p class="eyebrow">Inlet</p>
+          <p id="co2-in" class="font-mono text-lg font-medium mt-0.5">—</p>
+          <p class="font-mono text-[10px]" style="color:var(--muted-dim);">ppm</p>
+        </div>
+
+        <div class="ring-wrap !w-16 !h-16 shrink-0">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="ring-track" cx="32" cy="32" r="26" stroke-width="5"></circle>
+            <circle id="co2-ring" class="ring-value" cx="32" cy="32" r="26" stroke-width="5"
+              stroke="#3fe8d4" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="co2-eff" class="font-mono text-[13px] font-semibold" style="color:var(--cyan);">—</span>
+          </div>
+        </div>
+
+        <div class="card-inset px-3 py-2.5 text-right">
+          <p class="eyebrow">Outlet</p>
+          <p id="co2-out" class="font-mono text-lg font-medium mt-0.5">—</p>
+          <p class="font-mono text-[10px]" style="color:var(--muted-dim);">ppm</p>
+        </div>
+      </div>
+
+      <div class="flow-track my-3">
+        <span class="flow-runner slow" style="background:var(--lime); box-shadow:0 0 8px 1px rgba(166,255,77,0.6); animation-delay:0.6s;"></span>
+      </div>
+
+      <p class="font-mono text-[10px] leading-relaxed" style="color:var(--muted-dim);">
+        η_CO2 = ((CO2_in − CO2_out) / CO2_in) × 100 = <span id="co2-formula" style="color:var(--muted);">—</span>
+      </p>
+    </section>
+
+    <!-- BIO GRID -->
+    <section>
+      <div class="flex items-center justify-between mb-2 px-0.5">
+        <p class="eyebrow">Biological Homeostasis</p>
+        <i data-lucide="activity" class="w-3.5 h-3.5" style="color:var(--muted);"></i>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5">
+
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i data-lucide="flask-conical" class="w-3.5 h-3.5" style="color:var(--lime);"></i>
+            <p class="eyebrow">pH Level</p>
+          </div>
+          <p id="ph-val" class="font-mono text-xl font-semibold">—</p>
+          <div class="range-track mt-2.5" data-min="4" data-max="12" data-safe-min="7.2" data-safe-max="8.5">
+            <div class="range-safe"></div>
+            <div id="ph-marker" class="range-marker"></div>
+          </div>
+          <p class="font-mono text-[9px] mt-1.5" style="color:var(--muted-dim);">safe 7.2–8.5</p>
+        </div>
+
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i data-lucide="thermometer" class="w-3.5 h-3.5" style="color:var(--warn);"></i>
+            <p class="eyebrow">Water Temp</p>
+          </div>
+          <p id="temp-val" class="font-mono text-xl font-semibold">—</p>
+          <div class="range-track mt-2.5" data-min="10" data-max="38" data-safe-min="20" data-safe-max="28">
+            <div class="range-safe"></div>
+            <div id="temp-marker" class="range-marker"></div>
+          </div>
+          <p class="font-mono text-[9px] mt-1.5" style="color:var(--muted-dim);">safe 20–28°C</p>
+        </div>
+
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i data-lucide="droplets" class="w-3.5 h-3.5" style="color:var(--cyan);"></i>
+            <p class="eyebrow">Turbidity</p>
+          </div>
+          <p id="ntu-val" class="font-mono text-xl font-semibold">—</p>
+          <div class="range-track mt-2.5" data-min="0" data-max="600" data-safe-min="150" data-safe-max="450">
+            <div class="range-safe"></div>
+            <div id="ntu-marker" class="range-marker"></div>
+          </div>
+          <p class="font-mono text-[9px] mt-1.5" style="color:var(--muted-dim);">biomass proxy · NTU</p>
+        </div>
+
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i data-lucide="waves" class="w-3.5 h-3.5" style="color:var(--lime);"></i>
+            <p class="eyebrow">Dissolved O₂</p>
+          </div>
+          <p id="do-val" class="font-mono text-xl font-semibold">—</p>
+          <div class="range-track mt-2.5" data-min="0" data-max="14" data-safe-min="6" data-safe-max="10">
+            <div class="range-safe"></div>
+            <div id="do-marker" class="range-marker"></div>
+          </div>
+          <p class="font-mono text-[9px] mt-1.5" style="color:var(--muted-dim);">safe 6–10 mg/L</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CHART -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-1">
+        <div>
+          <p class="eyebrow">24H Trend</p>
+          <h2 class="font-display font-semibold text-[15px] mt-0.5">Capture vs. Biomass</h2>
+        </div>
+        <i data-lucide="line-chart" class="w-4 h-4" style="color:var(--muted);"></i>
+      </div>
+      <div class="flex items-center gap-4 mb-2 mt-2">
+        <span class="flex items-center gap-1.5 font-mono text-[10px]" style="color:var(--muted);">
+          <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:var(--lime);"></span>CO₂ reduction %
+        </span>
+        <span class="flex items-center gap-1.5 font-mono text-[10px]" style="color:var(--muted);">
+          <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:var(--cyan);"></span>Turbidity NTU
+        </span>
+      </div>
+      <div class="relative" style="height:220px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </section>
+
+    <!-- CIRCULAR ECONOMY -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Circular Economy</p>
+          <h2 class="font-display font-semibold text-[15px] mt-0.5">Yield & Recovery</h2>
+        </div>
+        <i data-lucide="recycle" class="w-4 h-4" style="color:var(--muted);"></i>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="card-inset p-3">
+          <p class="eyebrow">Treated Volume</p>
+          <p id="yield-volume" class="font-mono text-base font-semibold mt-1">—</p>
+          <p class="font-mono text-[9px] mt-0.5" style="color:var(--muted-dim);">L cumulative</p>
+        </div>
+        <div class="card-inset p-3">
+          <p class="eyebrow">CO₂ Sequestered</p>
+          <p id="yield-co2" class="font-mono text-base font-semibold mt-1" style="color:var(--lime);">—</p>
+          <p class="font-mono text-[9px] mt-0.5" style="color:var(--muted-dim);">kg · 1.83 kg/kg biomass</p>
+        </div>
+        <div class="card-inset p-3">
+          <p class="eyebrow">Carbon Credits</p>
+          <p id="yield-credits" class="font-mono text-base font-semibold mt-1" style="color:var(--cyan);">—</p>
+          <p class="font-mono text-[9px] mt-0.5" style="color:var(--muted-dim);">tCO2e accrued</p>
+        </div>
+        <div class="card-inset p-3">
+          <p class="eyebrow">Biomass Accum.</p>
+          <p id="yield-biomass" class="font-mono text-base font-semibold mt-1">—</p>
+          <p class="font-mono text-[9px] mt-0.5" style="color:var(--muted-dim);">kg dry weight</p>
+        </div>
+      </div>
+
+      <div class="hairline mt-4 pt-3.5">
+        <p class="eyebrow mb-2.5">Wastewater Nutrient Recovery</p>
+        <div class="space-y-2.5">
+          <div>
+            <div class="flex justify-between font-mono text-[11px] mb-1">
+              <span style="color:var(--muted);">Nitrogen removal</span>
+              <span id="n-removal-val">—</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full" style="background:var(--surface-2);">
+              <div id="n-removal-bar" class="h-1.5 rounded-full" style="width:0%; background:var(--lime); transition:width 0.6s ease;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between font-mono text-[11px] mb-1">
+              <span style="color:var(--muted);">Phosphorus removal</span>
+              <span id="p-removal-val">—</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full" style="background:var(--surface-2);">
+              <div id="p-removal-bar" class="h-1.5 rounded-full" style="width:0%; background:var(--cyan); transition:width 0.6s ease;"></div>
+            </div>
+          </div>
+        </div>
+        <p class="font-mono text-[9px] mt-2.5" style="color:var(--muted-dim);">target ≥ 90% reduction, both species</p>
+      </div>
+    </section>
+
+    <!-- CONTROLS -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Actuation</p>
+          <h2 class="font-display font-semibold text-[15px] mt-0.5">Manual Controls</h2>
+        </div>
+        <i data-lucide="sliders-horizontal" class="w-4 h-4" style="color:var(--muted);"></i>
+      </div>
+
+      <div class="flex items-center justify-between card-inset px-3.5 py-3 tap">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="sun" class="w-4 h-4" style="color:var(--warn);"></i>
+          <div>
+            <p class="text-[13px] font-medium">Photonic LED Assist</p>
+            <p class="font-mono text-[10px]" style="color:var(--muted-dim);">high-intensity stabilization</p>
+          </div>
+        </div>
+        <button id="led-toggle" class="toggle shrink-0" aria-pressed="false" aria-label="Toggle photonic LED assist">
+          <span class="knob"></span>
+        </button>
+      </div>
+
+      <div class="card-inset px-3.5 py-3.5 mt-2.5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="gauge" class="w-4 h-4" style="color:var(--cyan);"></i>
+            <p class="text-[13px] font-medium">Fluidic Pump Speed</p>
+          </div>
+          <span id="pump-val" class="font-mono text-sm font-semibold" style="color:var(--cyan);">—%</span>
+        </div>
+        <input id="pump-slider" type="range" min="10" max="100" value="55" step="1" class="w-full tap">
+        <div class="flex justify-between font-mono text-[9px] mt-1.5" style="color:var(--muted-dim);">
+          <span>10% · idle</span>
+          <span>100% · max intake</span>
+        </div>
+      </div>
+    </section>
+
+    <p class="text-center font-mono text-[9px] pb-4" style="color:var(--muted-dim);">
+      Node-01 · ESP32 core · sim telemetry stream
+    </p>
+
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+
+  // ---------- STATE ----------
+  const state = {
+    pumpSpeed: 55,          // %
+    ledOn: false,
+    runtimeSec: 312 * 3600 + 1840,   // deployed 312h ago
+    cumulativeVolumeL: 48210,
+    biomassKg: 6.4,
+    creditsT: 0.0021,
+
+    pm25In: 41, pm25Out: 8,
+    pm10In: 68, pm10Out: 14,
+    co2In: 862, co2Out: 574,
+
+    ph: 7.65,
+    waterTemp: 23.8,
+    ntu: 268,
+    doLevel: 7.4,
+
+    nRemoval: 88.5,
+    pRemoval: 86.2,
+  };
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const jitter = (amt) => (Math.random() - 0.5) * 2 * amt;
+  const fmt = (v, d = 1) => Number(v).toFixed(d);
+
+  // ---------- DERIVED CALCS ----------
+  function computeFlowRate() {
+    // 5 - 50 L/min across slider range, LED assist gives a small circulation boost
+    const base = 5 + (state.pumpSpeed / 100) * 45;
+    return base * (state.ledOn ? 1.03 : 1);
+  }
+
+  function recalc() {
+    const flow = computeFlowRate();
+
+    // PM: higher throughput trades a little per-pass capture efficiency
+    const pmEffBase = 84 - (state.pumpSpeed - 50) * 0.12 + (state.ledOn ? 2.5 : 0);
+    const pmEff = clamp(pmEffBase + jitter(1.2), 55, 96);
+    state.pm25In = clamp(41 + jitter(3), 18, 90);
+    state.pm25Out = state.pm25In * (1 - pmEff / 100);
+    state.pm10In = state.pm25In * 1.62 + jitter(2);
+    state.pm10Out = state.pm10In * (1 - (pmEff - 3) / 100);
+
+    // CO2: efficiency scales mildly with biomass (turbidity) and LED assist
+    const co2EffBase = 26 + (state.ntu / 600) * 22 + (state.ledOn ? 4 : 0) - (state.pumpSpeed - 50) * 0.04;
+    const co2Eff = clamp(co2EffBase + jitter(1.5), 12, 58);
+    state.co2In = clamp(860 + jitter(25), 640, 1100);
+    state.co2Out = state.co2In * (1 - co2Eff / 100);
+
+    // Culture parameters drift slowly
+    state.ph = clamp(state.ph + jitter(0.02), 6.4, 9.2);
+    state.waterTemp = clamp(state.waterTemp + jitter(0.08) + (state.ledOn ? 0.01 : 0), 14, 34);
+    state.ntu = clamp(state.ntu + jitter(1.6) + 0.02, 40, 560);
+    state.doLevel = clamp(state.doLevel + jitter(0.06) + (co2Eff > 30 ? 0.01 : -0.01), 2, 13);
+
+    state.nRemoval = clamp(state.nRemoval + jitter(0.15), 60, 96);
+    state.pRemoval = clamp(state.pRemoval + jitter(0.15), 60, 96);
+
+    // cumulative yield tracking (2s tick)
+    state.cumulativeVolumeL += flow * (2 / 60);
+    const co2RemovedPpmEquiv = (state.co2In - state.co2Out);
+    const biomassGrowth = (co2RemovedPpmEquiv / 900) * (flow / 30) * 0.00042;
+    state.biomassKg += Math.max(0, biomassGrowth);
+    state.creditsT = (state.biomassKg * 1.83) / 1000;
+
+    return { flow, pmEff, co2Eff };
+  }
+
+  // ---------- RING HELPERS ----------
+  const R_BIG = 45, C_BIG = 2 * Math.PI * R_BIG;
+  const R_SM = 26, C_SM = 2 * Math.PI * R_SM;
+  function setRing(el, circumference, pct) {
+    const offset = circumference * (1 - clamp(pct, 0, 100) / 100);
+    el.style.strokeDasharray = circumference.toFixed(1);
+    el.style.strokeDashoffset = offset.toFixed(1);
+  }
+
+  function setMarker(track, value) {
+    const min = parseFloat(track.dataset.min), max = parseFloat(track.dataset.max);
+    const safeMin = parseFloat(track.dataset.safeMin), safeMax = parseFloat(track.dataset.safeMax);
+    const safeEl = track.querySelector('.range-safe');
+    const markerEl = track.parentElement.querySelector(`#${track.parentElement.querySelector('[id$="-marker"]')?.id || ''}`) || track.querySelector('.range-marker');
+    const pctOf = (v) => clamp(((v - min) / (max - min)) * 100, 0, 100);
+    safeEl.style.left = pctOf(safeMin) + '%';
+    safeEl.style.width = (pctOf(safeMax) - pctOf(safeMin)) + '%';
+    const p = pctOf(value);
+    const marker = track.querySelector('.range-marker');
+    marker.style.left = p + '%';
+    const inSafe = value >= safeMin && value <= safeMax;
+    marker.style.background = inSafe ? 'var(--lime)' : 'var(--warn)';
+  }
+
+  function fmtRuntime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const d = Math.floor(h / 24);
+    const hh = h % 24;
+    return `${d}d ${hh}h ${m}m`;
+  }
+
+  // ---------- RENDER ----------
+  function render(flow, pmEff, co2Eff) {
+    document.getElementById('hdr-flow').textContent = `${fmt(flow, 1)} L/min`;
+    document.getElementById('hdr-runtime').textContent = fmtRuntime(state.runtimeSec);
+
+    document.getElementById('pm25-in').textContent = fmt(state.pm25In, 1);
+    document.getElementById('pm25-out').textContent = fmt(state.pm25Out, 1);
+    document.getElementById('pm10-in').textContent = fmt(state.pm10In, 1) + ' µg/m³';
+    document.getElementById('pm10-out').textContent = fmt(state.pm10Out, 1) + ' µg/m³';
+    document.getElementById('pm-eff').textContent = fmt(pmEff, 0) + '%';
+    document.getElementById('pm-formula').textContent =
+      `(${fmt(state.pm25In,1)} − ${fmt(state.pm25Out,1)}) / ${fmt(state.pm25In,1)} × 100 = ${fmt(pmEff,1)}%`;
+    setRing(document.getElementById('pm-ring'), C_SM, pmEff);
+
+    document.getElementById('co2-in').textContent = Math.round(state.co2In);
+    document.getElementById('co2-out').textContent = Math.round(state.co2Out);
+    document.getElementById('co2-eff').textContent = fmt(co2Eff, 0) + '%';
+    document.getElementById('co2-formula').textContent =
+      `(${Math.round(state.co2In)} − ${Math.round(state.co2Out)}) / ${Math.round(state.co2In)} × 100 = ${fmt(co2Eff,1)}%`;
+    setRing(document.getElementById('co2-ring'), C_SM, co2Eff);
+
+    document.getElementById('ph-val').textContent = fmt(state.ph, 2);
+    document.getElementById('temp-val').textContent = fmt(state.waterTemp, 1) + '°C';
+    document.getElementById('ntu-val').textContent = fmt(state.ntu, 0);
+    document.getElementById('do-val').textContent = fmt(state.doLevel, 1) + ' mg/L';
+
+    setMarker(document.querySelector('[data-min="4"]'), state.ph);
+    setMarker(document.querySelector('[data-min="10"]'), state.waterTemp);
+    setMarker(document.querySelector('[data-min="0"][data-max="600"]'), state.ntu);
+    setMarker(document.querySelector('[data-min="0"][data-max="14"]'), state.doLevel);
+
+    document.getElementById('yield-volume').textContent = Math.round(state.cumulativeVolumeL).toLocaleString() + ' L';
+    document.getElementById('yield-co2').textContent = fmt((state.biomassKg * 1.83), 2) + ' kg';
+    document.getElementById('yield-credits').textContent = fmt(state.creditsT, 4) + ' tCO2e';
+    document.getElementById('yield-biomass').textContent = fmt(state.biomassKg, 2) + ' kg';
+
+    document.getElementById('n-removal-val').textContent = fmt(state.nRemoval, 1) + '%';
+    document.getElementById('p-removal-val').textContent = fmt(state.pRemoval, 1) + '%';
+    document.getElementById('n-removal-bar').style.width = state.nRemoval + '%';
+    document.getElementById('p-removal-bar').style.width = state.pRemoval + '%';
+
+    document.getElementById('pump-val').textContent = state.pumpSpeed + '%';
+    document.getElementById('pump-slider').style.setProperty('--fill', ((state.pumpSpeed - 10) / 90 * 100) + '%');
+  }
+
+  function markLive() {
+    ['pm25-in','pm25-out','co2-in','co2-out','ph-val','temp-val','ntu-val','do-val'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    });
+  }
+
+  // fix marker lookup (simplify range-marker binding by data attribute order)
+  document.querySelectorAll('.range-track').forEach(track => {
+    track.querySelector('.range-marker').id = '';
+  });
+
+  // ---------- CHART ----------
+  const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+  let seedNtu = 140;
+  const co2ReductionSeries = [];
+  const ntuSeries = [];
+  for (let i = 0; i < 24; i++) {
+    seedNtu += 5.2 + jitter(2.5);
+    seedNtu = clamp(seedNtu, 120, 420);
+    ntuSeries.push(seedNtu);
+    const reduction = 22 + (seedNtu / 420) * 24 + jitter(2);
+    co2ReductionSeries.push(clamp(reduction, 15, 55));
+  }
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: 'CO2 reduction %',
+          data: co2ReductionSeries,
+          borderColor: '#a6ff4d',
+          backgroundColor: 'rgba(166,255,77,0.08)',
+          yAxisID: 'y',
+          tension: 0.35,
+          pointRadius: 0,
+          borderWidth: 2,
+          fill: true,
+        },
+        {
+          label: 'Turbidity NTU',
+          data: ntuSeries,
+          borderColor: '#3fe8d4',
+          backgroundColor: 'transparent',
+          yAxisID: 'y1',
+          tension: 0.35,
+          pointRadius: 0,
+          borderWidth: 2,
+          borderDash: [4, 3],
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f1913',
+          borderColor: '#213026',
+          borderWidth: 1,
+          titleColor: '#e7f3ea',
+          bodyColor: '#7e9c8c',
+          titleFont: { family: 'IBM Plex Mono', size: 11 },
+          bodyFont: { family: 'IBM Plex Mono', size: 10 },
+          padding: 8,
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#5a7267', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 6 },
+          grid: { color: '#1a2620' },
+        },
+        y: {
+          position: 'left',
+          ticks: { color: '#a6ff4d', font: { family: 'IBM Plex Mono', size: 9 }, callback: v => v + '%' },
+          grid: { color: '#1a2620' },
+          min: 0, max: 70,
+        },
+        y1: {
+          position: 'right',
+          ticks: { color: '#3fe8d4', font: { family: 'IBM Plex Mono', size: 9 } },
+          grid: { display: false },
+          min: 0, max: 500,
+        }
+      }
+    }
+  });
+
+  // ---------- CONTROLS WIRING ----------
+  const slider = document.getElementById('pump-slider');
+  slider.addEventListener('input', () => {
+    state.pumpSpeed = parseInt(slider.value, 10);
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
+  });
+
+  const ledToggle = document.getElementById('led-toggle');
+  ledToggle.addEventListener('click', () => {
+    state.ledOn = !state.ledOn;
+    ledToggle.classList.toggle('on', state.ledOn);
+    ledToggle.setAttribute('aria-pressed', String(state.ledOn));
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
+  });
+
+  // ---------- TELEMETRY LOOP ----------
+  function tick() {
+    state.runtimeSec += 2;
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
+    markLive();
+  }
+
+  // initial paint
+  {
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
+    slider.value = state.pumpSpeed;
+    slider.style.setProperty('--fill', ((state.pumpSpeed - 10) / 90 * 100) + '%');
+  }
+  setInterval(tick, 2000);
+
+  // ---------- BOOT SEQUENCE ----------
+  const bootRing = document.getElementById('boot-ring');
+  const bootPct = document.getElementById('boot-pct');
+  const bootScreen = document.getElementById('boot-screen');
+  const appEl = document.getElementById('app');
+  let progress = 0;
+  const bootInterval = setInterval(() => {
+    progress += 6 + Math.random() * 10;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(bootInterval);
+      setTimeout(() => {
+        bootScreen.style.opacity = '0';
+        appEl.style.opacity = '1';
+        setTimeout(() => bootScreen.remove(), 550);
+      }, 220);
+    }
+    setRing(bootRing, C_BIG, progress);
+    bootPct.textContent = Math.round(progress) + '%';
+  }, 160);
+});
+</script>
+</body>
+</html>

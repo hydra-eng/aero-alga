@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#070E0C">
+<title>AeroAlga BDPA-v2 · Telemetry Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070e0c;
+    --surface:#0f1913;
+    --surface-2:#142019;
+    --border:#213026;
+    --border-soft:#1a2620;
+    --text:#e7f3ea;
+    --muted:#7e9c8c;
+    --muted-dim:#5a7267;
+    --lime:#a6ff4d;
+    --lime-dim:#5c7a3a;
+    --cyan:#3fe8d4;
+    --warn:#ffb454;
+    --danger:#ff6b5e;
+  }
+  *{-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--text);
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .font-display{font-family:'Space Grotesk',sans-serif;}
+  .font-mono{font-family:'IBM Plex Mono',monospace;}
+  .bg-noise{
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(166,255,77,0.05), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(63,232,212,0.05), transparent 40%);
+  }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:18px; }
+  .card-inset{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:14px; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--muted); }
+  .hairline{ border-top:1px solid var(--border-soft); }
+  .pulse-dot{ position:relative; width:8px; height:8px; border-radius:50%; background:var(--lime); }
+  .pulse-dot::after{
+    content:''; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--lime);
+    animation:pulseRing 1.8s cubic-bezier(0.2,0.6,0.4,1) infinite;
+  }
+  @keyframes pulseRing{ 0%{ transform:scale(0.5); opacity:0.9; } 80%{ transform:scale(2.2); opacity:0; } 100%{ opacity:0; } }
+  .flow-track{
+    position:relative; height:2px;
+    background-image:linear-gradient(to right, var(--border-soft) 0 6px, transparent 6px 12px);
+    background-size:12px 2px; background-repeat:repeat-x;
+  }
+  .flow-runner{
+    position:absolute; top:-3px; width:8px; height:8px; border-radius:50%;
+    background:var(--cyan); box-shadow:0 0 8px 1px rgba(63,232,212,0.7);
+    animation:flowMove 2.4s linear infinite;
+  }
+  @keyframes flowMove{ 0%{ left:0%; opacity:0; } 8%{ opacity:1; } 92%{ opacity:1; } 100%{ left:100%; opacity:0; } }
+  .ring-wrap{ position:relative; width:64px; height:64px; }
+  .ring-wrap svg{ transform:rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--border-soft); stroke-width:5; }
+  .ring-value{ fill:none; stroke-linecap:round; stroke-width:5; transition:stroke-dashoffset 0.6s ease; }
+  .range-track{ position:relative; height:6px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); }
+  .range-safe{ position:absolute; top:0; bottom:0; background:rgba(166,255,77,0.16); border-radius:99px; }
+  .range-marker{ position:absolute; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); border:2px solid var(--bg); transition:left 0.4s ease; }
+  .toggle{ width:52px; height:30px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); position:relative; cursor:pointer; transition:background 0.25s ease; }
+  .toggle .knob{ position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:var(--muted-dim); transition:left 0.25s ease, background 0.25s ease; }
+  .toggle.on{ background:rgba(166,255,77,0.14); border-color:var(--lime-dim); }
+  .toggle.on .knob{ left:24px; background:var(--lime); box-shadow:0 0 10px rgba(166,255,77,0.5); }
+  input[type="range"]{ -webkit-appearance:none; height:6px; border-radius:99px; background:var(--surface-2); }
+  input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:var(--bg); border:3px solid var(--cyan); cursor:pointer; }
+</style>
+</head>
+<body class="bg-noise min-h-screen pb-12">
+
+<div class="max-w-md mx-auto px-4">
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 pt-4 pb-3 -mx-4 px-4 bg-[#070e0c]/90 backdrop-blur-md">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-semibold text-[18px]">AeroAlga BDPA-v2</h1>
+        <p id="node-badge" class="eyebrow mt-0.5">NODE-01 · LIVE WEBSOCKET LINK</p>
+      </div>
+      <div id="conn-pill" class="flex items-center gap-1.5 card-inset px-2.5 py-1.5">
+        <span class="pulse-dot"></span>
+        <span id="conn-text" class="font-mono text-[11px] text-[#a6ff4d]">LIVE</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 mt-3">
+      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
+        <i data-lucide="wind" class="w-4 h-4 text-[#3fe8d4]"></i>
+        <div>
+          <p class="eyebrow">Flow Rate</p>
+          <p id="hdr-flow" class="font-mono text-sm font-medium">0.0 L/min</p>
+        </div>
+      </div>
+      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
+        <i data-lucide="timer" class="w-4 h-4 text-[#3fe8d4]"></i>
+        <div>
+          <p class="eyebrow">Runtime</p>
+          <p id="hdr-runtime" class="font-mono text-sm font-medium">0d 0h 0m</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="space-y-4 mt-2">
+    <!-- PM CARD -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Particulate Filtration</p>
+          <h2 class="font-display font-semibold text-[15px]">PM2.5 / PM10</h2>
+        </div>
+        <i data-lucide="filter" class="w-4 h-4 text-[#7e9c8c]"></i>
+      </div>
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div class="card-inset px-3 py-2.5">
+          <p class="eyebrow">Inlet</p>
+          <p id="pm25-in" class="font-mono text-lg font-medium">0.0</p>
+          <p class="font-mono text-[10px] text-[#5a7267]">µg/m³ PM2.5</p>
+        </div>
+        <div class="ring-wrap shrink-0">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
+            <circle id="pm-ring" class="ring-value" cx="32" cy="32" r="26" stroke="#a6ff4d" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="pm-eff" class="font-mono text-[13px] font-semibold text-[#a6ff4d]">0%</span>
+          </div>
+        </div>
+        <div class="card-inset px-3 py-2.5 text-right">
+          <p class="eyebrow">Outlet</p>
+          <p id="pm25-out" class="font-mono text-lg font-medium">0.0</p>
+          <p class="font-mono text-[10px] text-[#5a7267]">µg/m³ PM2.5</p>
+        </div>
+      </div>
+      <div class="flow-track my-3"><span class="flow-runner"></span></div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex justify-between card-inset px-3 py-2"><span class="eyebrow">PM10 in</span><span id="pm10-in" class="font-mono text-xs">0 µg/m³</span></div>
+        <div class="flex justify-between card-inset px-3 py-2"><span class="eyebrow">PM10 out</span><span id="pm10-out" class="font-mono text-xs">0 µg/m³</span></div>
+      </div>
+    </section>
+
+    <!-- CO2 CARD -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Gaseous Exchange</p>
+          <h2 class="font-display font-semibold text-[15px]">CO₂ Fixation</h2>
+        </div>
+        <i data-lucide="leaf" class="w-4 h-4 text-[#7e9c8c]"></i>
+      </div>
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div class="card-inset px-3 py-2.5">
+          <p class="eyebrow">Inlet</p>
+          <p id="co2-in" class="font-mono text-lg font-medium">0</p>
+          <p class="font-mono text-[10px] text-[#5a7267]">ppm CO₂</p>
+        </div>
+        <div class="ring-wrap shrink-0">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
+            <circle id="co2-ring" class="ring-value" cx="32" cy="32" r="26" stroke="#3fe8d4" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="co2-eff" class="font-mono text-[13px] font-semibold text-[#3fe8d4]">0%</span>
+          </div>
+        </div>
+        <div class="card-inset px-3 py-2.5 text-right">
+          <p class="eyebrow">Outlet</p>
+          <p id="co2-out" class="font-mono text-lg font-medium">0</p>
+          <p class="font-mono text-[10px] text-[#5a7267]">ppm CO₂</p>
+        </div>
+      </div>
+      <div class="flow-track my-3"><span class="flow-runner" style="background:var(--lime); animation-delay:0.8s;"></span></div>
+    </section>
+
+    <!-- BIO-HOMEOSTASIS -->
+    <section>
+      <p class="eyebrow mb-2">Biological Homeostasis</p>
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="flask-conical" class="w-3.5 h-3.5 text-[#a6ff4d]"></i><p class="eyebrow">pH Level</p></div>
+          <p id="ph-val" class="font-mono text-xl font-semibold">7.60</p>
+          <div class="range-track mt-2.5"><div class="range-safe" style="left:40%; width:16%;"></div><div id="ph-marker" class="range-marker bg-[#a6ff4d]" style="left:45%;"></div></div>
+          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 7.2–8.5</p>
+        </div>
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="thermometer" class="w-3.5 h-3.5 text-[#ffb454]"></i><p class="eyebrow">Water Temp</p></div>
+          <p id="temp-val" class="font-mono text-xl font-semibold">24.0°C</p>
+          <div class="range-track mt-2.5"><div class="range-safe" style="left:35%; width:28%;"></div><div id="temp-marker" class="range-marker bg-[#a6ff4d]" style="left:50%;"></div></div>
+          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 20–28°C</p>
+        </div>
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="droplets" class="w-3.5 h-3.5 text-[#3fe8d4]"></i><p class="eyebrow">Turbidity</p></div>
+          <p id="ntu-val" class="font-mono text-xl font-semibold">260 NTU</p>
+          <div class="range-track mt-2.5"><div class="range-safe" style="left:25%; width:50%;"></div><div id="ntu-marker" class="range-marker bg-[#a6ff4d]" style="left:43%;"></div></div>
+          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">biomass proxy</p>
+        </div>
+        <div class="card p-3">
+          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="waves" class="w-3.5 h-3.5 text-[#a6ff4d]"></i><p class="eyebrow">Dissolved O₂</p></div>
+          <p id="do-val" class="font-mono text-xl font-semibold">7.4 mg/L</p>
+          <div class="range-track mt-2.5"><div class="range-safe" style="left:42%; width:28%;"></div><div id="do-marker" class="range-marker bg-[#a6ff4d]" style="left:52%;"></div></div>
+          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 6–10 mg/L</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTUATION CONTROLS -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="eyebrow">Actuation</p>
+          <h2 class="font-display font-semibold text-[15px]">Direct Node Control</h2>
+        </div>
+        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-[#7e9c8c]"></i>
+      </div>
+      <div class="flex items-center justify-between card-inset px-3.5 py-3">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="sun" class="w-4 h-4 text-[#ffb454]"></i>
+          <div><p class="text-[13px] font-medium">Photonic LED Assist</p><p class="font-mono text-[10px] text-[#5a7267]">photosynthesis boost</p></div>
+        </div>
+        <button id="led-toggle" class="toggle" aria-pressed="false"><span class="knob"></span></button>
+      </div>
+      <div class="card-inset px-3.5 py-3.5 mt-2.5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2"><i data-lucide="gauge" class="w-4 h-4 text-[#3fe8d4]"></i><p class="text-[13px] font-medium">Fluidic Pump Speed</p></div>
+          <span id="pump-val" class="font-mono text-sm font-semibold text-[#3fe8d4]">55%</span>
+        </div>
+        <input id="pump-slider" type="range" min="10" max="100" value="55" class="w-full">
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  const nodeId = "node-01";
+  const apiBase = window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000";
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsHost = window.location.host.includes(":8000") ? window.location.host : "localhost:8000";
+  const wsUrl = `${wsProtocol}//${wsHost}/api/v1/ws/stream/${nodeId}`;
+
+  const setRing = (el, pct) => {
+    const c = 163.4;
+    el.style.strokeDashoffset = (c * (1 - Math.max(0, Math.min(100, pct)) / 100)).toFixed(1);
+  };
+
+  const updateUI = (data) => {
+    document.getElementById('hdr-flow').textContent = (data.flow_rate || 0).toFixed(1) + ' L/min';
+    const s = data.runtime_sec || 0;
+    const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const d = Math.floor(h / 24);
+    document.getElementById('hdr-runtime').textContent = `${d}d ${h % 24}h ${m}m`;
+
+    document.getElementById('pm25-in').textContent = (data.pm25_in || 0).toFixed(1);
+    document.getElementById('pm25-out').textContent = (data.pm25_out || 0).toFixed(1);
+    document.getElementById('pm10-in').textContent = (data.pm10_in || 0).toFixed(1) + ' µg/m³';
+    document.getElementById('pm10-out').textContent = (data.pm10_out || 0).toFixed(1) + ' µg/m³';
+    document.getElementById('pm-eff').textContent = Math.round(data.pm_efficiency || 0) + '%';
+    setRing(document.getElementById('pm-ring'), data.pm_efficiency || 0);
+
+    document.getElementById('co2-in').textContent = Math.round(data.co2_in || 0);
+    document.getElementById('co2-out').textContent = Math.round(data.co2_out || 0);
+    document.getElementById('co2-eff').textContent = Math.round(data.co2_efficiency || 0) + '%';
+    setRing(document.getElementById('co2-ring'), data.co2_efficiency || 0);
+
+    document.getElementById('ph-val').textContent = (data.ph || 7.6).toFixed(2);
+    document.getElementById('temp-val').textContent = (data.water_temp || 24.0).toFixed(1) + '°C';
+    document.getElementById('ntu-val').textContent = Math.round(data.turbidity_ntu || 250) + ' NTU';
+    document.getElementById('do-val').textContent = (data.dissolved_oxygen || 7.4).toFixed(1) + ' mg/L';
+  };
+
+  // Connect live WebSocket
+  let ws;
+  function connectWebSocket() {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      document.getElementById('conn-text').textContent = 'LIVE';
+      document.getElementById('conn-text').style.color = 'var(--lime)';
+    };
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        updateUI(payload);
+      } catch (err) { console.error(err); }
+    };
+    ws.onclose = () => {
+      document.getElementById('conn-text').textContent = 'RETRY';
+      document.getElementById('conn-text').style.color = 'var(--warn)';
+      setTimeout(connectWebSocket, 3000);
+    };
+  }
+  connectWebSocket();
+
+  // Actuation Event Handlers
+  const pumpSlider = document.getElementById('pump-slider');
+  pumpSlider.addEventListener('change', () => {
+    const val = parseInt(pumpSlider.value, 10);
+    document.getElementById('pump-val').textContent = val + '%';
+    fetch(`${apiBase}/api/v1/actuation/${nodeId}/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pump_speed_pct: val })
+    }).catch(console.error);
+  });
+
+  const ledToggle = document.getElementById('led-toggle');
+  let ledState = false;
+  ledToggle.addEventListener('click', () => {
+    ledState = !ledState;
+    ledToggle.classList.toggle('on', ledState);
+    fetch(`${apiBase}/api/v1/actuation/${nodeId}/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ led_assist_on: ledState })
+    }).catch(console.error);
+  });
+});
+</script>
+</body>
+</html>

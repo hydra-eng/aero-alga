@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bio_bg">#070E0C</color>
+    <color name="bio_surface">#0F1913</color>
+    <color name="bio_lime">#A6FF4D</color>
+    <color name="bio_cyan">#3FE8D4</color>
+</resources>
