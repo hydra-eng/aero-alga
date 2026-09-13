@@ -30,7 +30,6 @@ fun SettingsScreen(
     var alertOnHypoxia by remember { mutableStateOf(true) }
     var alertOnPhDrift by remember { mutableStateOf(true) }
     var alertOnOverheat by remember { mutableStateOf(true) }
-    var showSavedSnackbar by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -42,12 +41,15 @@ fun SettingsScreen(
     ) {
         Column {
             Text(
-                text = "System Settings & Calibration",
-                style = MaterialTheme.typography.headlineMedium,
-                color = BioTextPrimary
+                text = "CALIBRATION & MESH CONFIG",
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = BioTextPrimary,
+                letterSpacing = 1.sp
             )
             Text(
-                text = "COMMUNICATION · SENSOR CALIBRATION · ALERTS",
+                text = "ELECTROCHEMICAL PROBES · TELEMETRY INGESTION HUB",
                 style = MaterialTheme.typography.labelSmall,
                 color = BioTextMuted
             )
@@ -70,14 +72,14 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(Icons.Default.Dns, contentDescription = null, tint = BioLime)
-                    Text("Backend Hub Host", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("TELEMETRY INGESTION HUB", fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
-                    label = { Text("Base URL") },
-                    placeholder = { Text("http://192.168.1.100:8000/") },
+                    label = { Text("Base URL", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
+                    placeholder = { Text("http://192.168.1.100:8000/", fontFamily = FontFamily.Monospace) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -89,13 +91,12 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         repository.updateBaseUrl(serverUrl.trim())
-                        showSavedSnackbar = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BioLime, contentColor = BioBackground),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Update Connection", fontWeight = FontWeight.Bold)
+                    Text("UPDATE LINK", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -117,25 +118,25 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(Icons.Default.Build, contentDescription = null, tint = BioCyan)
-                    Text("Electrochemical Calibration", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("ELECTROCHEMICAL SENSOR CALIBRATION", fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
 
-                CalibrationActionRow(
+                MatrixCalibrationActionRow(
                     title = "pH Probe 2-Point Calibration",
                     desc = "Zero offset with standard pH 7.00 buffer",
-                    buttonText = "Calibrate pH"
+                    buttonText = "ZERO pH"
                 )
 
-                CalibrationActionRow(
-                    title = "MH-Z19B NDIR Zero Point",
-                    desc = "Expose inlet/outlet sensors to 400ppm fresh air",
-                    buttonText = "Zero NDIR"
+                MatrixCalibrationActionRow(
+                    title = "MH-Z19B NDIR Zero Reference",
+                    desc = "Expose sensors to 400ppm fresh atmosphere",
+                    buttonText = "ZERO NDIR"
                 )
 
-                CalibrationActionRow(
-                    title = "Turbidity Optical Zero",
-                    desc = "Place sensor in pure distilled water (0 NTU reference)",
-                    buttonText = "Zero NTU"
+                MatrixCalibrationActionRow(
+                    title = "Turbidity Optical Zeroing",
+                    desc = "Zero calibration in pure distilled water (0 NTU)",
+                    buttonText = "ZERO NTU"
                 )
             }
         }
@@ -157,46 +158,46 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(Icons.Default.Notifications, contentDescription = null, tint = BioWarn)
-                    Text("Biological Threshold Alarms", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("HOMEOSTASIS ALERTS & GUARDS", fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
 
-                SettingToggleRow("Alarm on Hypoxia (DO < 5.0 mg/L)", alertOnHypoxia) { alertOnHypoxia = it }
-                SettingToggleRow("Alarm on pH Drift (outside 7.2–8.5)", alertOnPhDrift) { alertOnPhDrift = it }
-                SettingToggleRow("Alarm on Overheat (Temp > 28°C)", alertOnOverheat) { alertOnOverheat = it }
+                MatrixSettingToggleRow("ALARM ON HYPOXIA (DO < 5.0 mg/L)", alertOnHypoxia) { alertOnHypoxia = it }
+                MatrixSettingToggleRow("ALARM ON pH DRIFT (OUTSIDE 7.2–8.5)", alertOnPhDrift) { alertOnPhDrift = it }
+                MatrixSettingToggleRow("ALARM ON CULTURE OVERHEAT (> 28°C)", alertOnOverheat) { alertOnOverheat = it }
             }
         }
     }
 }
 
 @Composable
-fun CalibrationActionRow(title: String, desc: String, buttonText: String) {
+fun MatrixCalibrationActionRow(title: String, desc: String, buttonText: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(title, fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Text(desc, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = BioTextMutedDim)
         }
         OutlinedButton(
             onClick = {},
             border = androidx.compose.foundation.BorderStroke(1.dp, BioBorderSoft),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(6.dp)
         ) {
-            Text(buttonText, fontSize = 11.sp, color = BioTextPrimary)
+            Text(buttonText, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioCyan)
         }
     }
 }
 
 @Composable
-fun SettingToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun MatrixSettingToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 13.sp, color = BioTextPrimary)
+        Text(label, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = BioTextPrimary)
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,

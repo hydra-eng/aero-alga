@@ -1,5 +1,11 @@
 package com.aeroalga.app.ui.screens.dashboard
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -22,8 +28,9 @@ import androidx.compose.ui.unit.sp
 import com.aeroalga.app.data.model.TelemetryData
 import com.aeroalga.app.data.repository.NodeRepository
 import com.aeroalga.app.ui.components.AnimatedFlowTrack
-import com.aeroalga.app.ui.components.EfficiencyRadialRing
-import com.aeroalga.app.ui.components.HomeostasisSafeZoneBar
+import com.aeroalga.app.ui.components.DotMatrixBar
+import com.aeroalga.app.ui.components.DotMatrixDisplay
+import com.aeroalga.app.ui.components.DotMatrixGauge
 import com.aeroalga.app.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -48,7 +55,10 @@ fun DashboardScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // TOP HEADER
+        // TOP HARDWARE MARQUEE TICKER BANNER
+        DotMatrixTickerBanner(activeNode = activeNode, isConnected = isConnected)
+
+        // HERO HEADER
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -56,71 +66,69 @@ fun DashboardScreen(
         ) {
             Column {
                 Text(
-                    text = "AeroAlga BDPA-v2",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = BioTextPrimary
+                    text = "AEROALGA v2.0",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = BioTextPrimary,
+                    letterSpacing = 1.sp
                 )
                 Text(
-                    text = "NODE: $activeNode · LIVE TELEMETRY",
+                    text = "BDPA-v2 · MATRIX TELEMETRY",
                     style = MaterialTheme.typography.labelSmall,
                     color = BioTextMuted
                 )
             }
 
-            // Live Pulse Pill
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(BioSurfaceVariant)
-                    .border(1.dp, BioBorderSoft, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (isConnected) BioLime else BioWarn)
-                )
+            // Runtime Display
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = if (isConnected) "LIVE" else "SYNC",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isConnected) BioLime else BioWarn
+                    text = "SYSTEM RUNTIME",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BioTextMutedDim
+                )
+                DotMatrixDisplay(
+                    text = formatRuntime(telemetry.runtimeSec),
+                    activeColor = BioCyan,
+                    dotRadius = 1.1.dp,
+                    dotSpacing = 0.8.dp,
+                    showInactiveDots = false
                 )
             }
         }
 
-        // STATS ROW
+        // AERATION FLOW & PUMP STATS
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HeaderStatBox(
+            MatrixHeaderStatBox(
                 icon = Icons.Default.Air,
-                label = "Flow Rate",
-                value = "${String.format("%.1f", telemetry.flowRate)} L/min",
+                label = "Aeration Flow",
+                valueText = String.format("%.1f", telemetry.flowRate),
+                unit = "L/min",
+                color = BioCyan,
                 modifier = Modifier.weight(1f)
             )
-            HeaderStatBox(
-                icon = Icons.Default.Timer,
-                label = "Runtime",
-                value = formatRuntime(telemetry.runtimeSec),
+            MatrixHeaderStatBox(
+                icon = Icons.Default.Speed,
+                label = "Pump PWM",
+                valueText = "${telemetry.pumpSpeedPct}%",
+                unit = "5kHz",
+                color = BioLime,
                 modifier = Modifier.weight(1f)
             )
         }
 
-        // PARTICULATE FILTRATION CARD
-        FiltrationCard(telemetry)
+        // PARTICULATE FILTRATION (PMS5003 DUAL UART)
+        MatrixFiltrationCard(telemetry)
 
-        // CO2 FIXATION CARD
-        Co2FixationCard(telemetry)
+        // CO2 FIXATION (MH-Z19B NDIR)
+        MatrixCo2Card(telemetry)
 
-        // BIOLOGICAL HOMEOSTASIS SECTION
+        // BIOLOGICAL HOMEOSTASIS (DOT MATRIX LED METERS)
         Text(
-            text = "BIOLOGICAL HOMEOSTASIS",
+            text = "HOMEOSTASIS MATRIX · LIVE CULTURE",
             style = MaterialTheme.typography.labelSmall,
             color = BioTextMuted,
             modifier = Modifier.padding(top = 4.dp)
@@ -130,24 +138,26 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HomeostasisItemCard(
+            MatrixHomeostasisCard(
                 icon = Icons.Default.Science,
                 iconColor = BioLime,
                 title = "pH Level",
-                value = String.format("%.2f", telemetry.ph),
+                valueString = String.format("%.2f", telemetry.ph),
                 safeRangeText = "safe 7.2–8.5",
                 current = telemetry.ph,
                 min = 4f, max = 12f, safeMin = 7.2f, safeMax = 8.5f,
+                defaultColor = BioLime,
                 modifier = Modifier.weight(1f)
             )
-            HomeostasisItemCard(
+            MatrixHomeostasisCard(
                 icon = Icons.Default.Thermostat,
-                iconColor = BioWarn,
+                iconColor = BioCyan,
                 title = "Water Temp",
-                value = "${String.format("%.1f", telemetry.waterTemp)}°C",
+                valueString = "${String.format("%.1f", telemetry.waterTemp)}C",
                 safeRangeText = "safe 20–28°C",
                 current = telemetry.waterTemp,
                 min = 10f, max = 38f, safeMin = 20f, safeMax = 28f,
+                defaultColor = BioCyan,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -156,29 +166,31 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            HomeostasisItemCard(
+            MatrixHomeostasisCard(
                 icon = Icons.Default.WaterDrop,
                 iconColor = BioCyan,
                 title = "Turbidity",
-                value = "${telemetry.turbidityNtu.toInt()} NTU",
-                safeRangeText = "biomass proxy",
+                valueString = "${telemetry.turbidityNtu.toInt()}",
+                safeRangeText = "biomass NTU",
                 current = telemetry.turbidityNtu,
                 min = 0f, max = 600f, safeMin = 150f, safeMax = 450f,
+                defaultColor = BioLime,
                 modifier = Modifier.weight(1f)
             )
-            HomeostasisItemCard(
+            MatrixHomeostasisCard(
                 icon = Icons.Default.Waves,
                 iconColor = BioLime,
                 title = "Dissolved O₂",
-                value = "${String.format("%.1f", telemetry.dissolvedOxygen)} mg/L",
+                valueString = "${String.format("%.1f", telemetry.dissolvedOxygen)}",
                 safeRangeText = "safe 6–10 mg/L",
                 current = telemetry.dissolvedOxygen,
                 min = 0f, max = 14f, safeMin = 6f, safeMax = 10f,
+                defaultColor = BioLime,
                 modifier = Modifier.weight(1f)
             )
         }
 
-        // ACTUATION CONTROLS
+        // ACTUATION HARDWARE CONTROLS
         Card(
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = BioSurface),
@@ -197,20 +209,21 @@ fun DashboardScreen(
                 ) {
                     Column {
                         Text(
-                            text = "ACTUATION",
+                            text = "ACTUATION MATRIX",
                             style = MaterialTheme.typography.labelSmall,
                             color = BioTextMuted
                         )
                         Text(
                             text = "Bioreactor Controls",
-                            style = MaterialTheme.typography.headlineMedium,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                     }
                     Icon(Icons.Default.Tune, contentDescription = null, tint = BioTextMuted)
                 }
 
-                // LED Toggle
+                // LED Assist Switch
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -228,7 +241,7 @@ fun DashboardScreen(
                         Icon(Icons.Default.WbSunny, contentDescription = null, tint = BioWarn)
                         Column {
                             Text("Photonic LED Assist", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text("high-intensity bio-stabilization", fontSize = 11.sp, color = BioTextMuted)
+                            Text("660nm/450nm PAR stabilized", fontSize = 11.sp, color = BioTextMuted)
                         }
                     }
                     Switch(
@@ -265,11 +278,12 @@ fun DashboardScreen(
                             Icon(Icons.Default.Speed, contentDescription = null, tint = BioCyan)
                             Text("Fluidic Pump Speed", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         }
-                        Text(
-                            "${pumpSliderVal.toInt()}%",
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = BioCyan
+                        DotMatrixDisplay(
+                            text = "${pumpSliderVal.toInt()}%",
+                            activeColor = BioCyan,
+                            dotRadius = 1.3.dp,
+                            dotSpacing = 0.8.dp,
+                            showInactiveDots = false
                         )
                     }
                     Slider(
@@ -292,8 +306,8 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("10% · idle", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
-                        Text("100% · max intake", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
+                        Text("10% · IDLE", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
+                        Text("100% · MAX INTAKE", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
                     }
                 }
             }
@@ -302,7 +316,63 @@ fun DashboardScreen(
 }
 
 @Composable
-fun FiltrationCard(telemetry: TelemetryData) {
+fun DotMatrixTickerBanner(activeNode: String, isConnected: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(BioSurface)
+            .border(1.dp, BioBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (isConnected) BioLime else BioWarn)
+            )
+            Text(
+                text = activeNode.uppercase(),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = BioLime,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = "· 2.4GHz MESH",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                color = BioTextMutedDim
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(BioSurfaceVariant)
+                .border(1.dp, BioBorderSoft, RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Text(
+                text = if (isConnected) "WS LINKED" else "OFFLINE",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isConnected) BioCyan else BioWarn
+            )
+        }
+    }
+}
+
+@Composable
+fun MatrixFiltrationCard(telemetry: TelemetryData) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = BioSurface),
@@ -320,8 +390,8 @@ fun FiltrationCard(telemetry: TelemetryData) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("PARTICULATE FILTRATION", style = MaterialTheme.typography.labelSmall)
-                    Text("PM2.5 / PM10 Removal", style = MaterialTheme.typography.headlineMedium, fontSize = 15.sp)
+                    Text("PARTICULATE DYNAMICS", style = MaterialTheme.typography.labelSmall)
+                    Text("PM2.5 / PM10 Removal", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
                 Icon(Icons.Default.FilterList, contentDescription = null, tint = BioTextMuted)
             }
@@ -331,9 +401,25 @@ fun FiltrationCard(telemetry: TelemetryData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MetricPill("Inlet", "${String.format("%.1f", telemetry.pm25In)}", "µg/m³ PM2.5")
-                EfficiencyRadialRing(value = telemetry.pmEfficiency, color = BioLime)
-                MetricPill("Outlet", "${String.format("%.1f", telemetry.pm25Out)}", "µg/m³ PM2.5")
+                MatrixMetricPill(
+                    title = "Inlet",
+                    valueString = String.format("%.1f", telemetry.pm25In),
+                    unit = "ug/m3 PM2.5",
+                    activeColor = BioWarn
+                )
+
+                DotMatrixGauge(
+                    percentage = telemetry.pmEfficiency,
+                    label = "n_PM",
+                    activeColor = BioLime
+                )
+
+                MatrixMetricPill(
+                    title = "Outlet",
+                    valueString = String.format("%.1f", telemetry.pm25Out),
+                    unit = "ug/m3 PM2.5",
+                    activeColor = BioLime
+                )
             }
 
             AnimatedFlowTrack(color = BioCyan)
@@ -342,12 +428,12 @@ fun FiltrationCard(telemetry: TelemetryData) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SecondaryStatBox("PM10 in", "${String.format("%.1f", telemetry.pm10In)} µg/m³", Modifier.weight(1f))
-                SecondaryStatBox("PM10 out", "${String.format("%.1f", telemetry.pm10Out)} µg/m³", Modifier.weight(1f))
+                MatrixSecondaryStat("PM10 IN", "${String.format("%.1f", telemetry.pm10In)} ug/m3", Modifier.weight(1f))
+                MatrixSecondaryStat("PM10 OUT", "${String.format("%.1f", telemetry.pm10Out)} ug/m3", Modifier.weight(1f))
             }
 
             Text(
-                text = "η_PM = ((PM_in − PM_out) / PM_in) × 100 = ${String.format("%.1f", telemetry.pmEfficiency)}%",
+                text = "n_PM = ((PM_in - PM_out) / PM_in) * 100 = ${String.format("%.1f", telemetry.pmEfficiency)}%",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 color = BioTextMutedDim
@@ -357,7 +443,7 @@ fun FiltrationCard(telemetry: TelemetryData) {
 }
 
 @Composable
-fun Co2FixationCard(telemetry: TelemetryData) {
+fun MatrixCo2Card(telemetry: TelemetryData) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = BioSurface),
@@ -375,8 +461,8 @@ fun Co2FixationCard(telemetry: TelemetryData) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("GASEOUS EXCHANGE", style = MaterialTheme.typography.labelSmall)
-                    Text("Biological CO₂ Fixation", style = MaterialTheme.typography.headlineMedium, fontSize = 15.sp)
+                    Text("CARBON FIXATION MATRIX", style = MaterialTheme.typography.labelSmall)
+                    Text("Biological CO2 Fixation", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
                 Icon(Icons.Default.Eco, contentDescription = null, tint = BioTextMuted)
             }
@@ -386,15 +472,31 @@ fun Co2FixationCard(telemetry: TelemetryData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MetricPill("Inlet", "${telemetry.co2In.toInt()}", "ppm CO₂")
-                EfficiencyRadialRing(value = telemetry.co2Efficiency, color = BioCyan)
-                MetricPill("Outlet", "${telemetry.co2Out.toInt()}", "ppm CO₂")
+                MatrixMetricPill(
+                    title = "Inlet",
+                    valueString = "${telemetry.co2In.toInt()}",
+                    unit = "PPM CO2",
+                    activeColor = BioWarn
+                )
+
+                DotMatrixGauge(
+                    percentage = telemetry.co2Efficiency,
+                    label = "n_CO2",
+                    activeColor = BioCyan
+                )
+
+                MatrixMetricPill(
+                    title = "Outlet",
+                    valueString = "${telemetry.co2Out.toInt()}",
+                    unit = "PPM CO2",
+                    activeColor = BioCyan
+                )
             }
 
             AnimatedFlowTrack(color = BioLime, durationMs = 3200)
 
             Text(
-                text = "η_CO2 = ((CO2_in − CO2_out) / CO2_in) × 100 = ${String.format("%.1f", telemetry.co2Efficiency)}%",
+                text = "Delta = ${telemetry.co2In.toInt() - telemetry.co2Out.toInt()} PPM NET CAPTURE",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 color = BioTextMutedDim
@@ -404,7 +506,12 @@ fun Co2FixationCard(telemetry: TelemetryData) {
 }
 
 @Composable
-fun MetricPill(title: String, value: String, unit: String) {
+fun MatrixMetricPill(
+    title: String,
+    valueString: String,
+    unit: String,
+    activeColor: androidx.compose.ui.graphics.Color
+) {
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -413,23 +520,32 @@ fun MetricPill(title: String, value: String, unit: String) {
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Text(title.uppercase(), style = MaterialTheme.typography.labelSmall)
-        Text(value, fontFamily = FontFamily.Monospace, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        DotMatrixDisplay(
+            text = valueString,
+            activeColor = activeColor,
+            dotRadius = 1.3.dp,
+            dotSpacing = 0.9.dp,
+            showInactiveDots = false
+        )
+        Spacer(modifier = Modifier.height(3.dp))
         Text(unit, fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
     }
 }
 
 @Composable
-fun HomeostasisItemCard(
+fun MatrixHomeostasisCard(
     icon: ImageVector,
     iconColor: androidx.compose.ui.graphics.Color,
     title: String,
-    value: String,
+    valueString: String,
     safeRangeText: String,
     current: Float,
     min: Float,
     max: Float,
     safeMin: Float,
     safeMax: Float,
+    defaultColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -448,22 +564,39 @@ fun HomeostasisItemCard(
                 Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
                 Text(title.uppercase(), style = MaterialTheme.typography.labelSmall)
             }
-            Text(value, fontFamily = FontFamily.Monospace, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-            HomeostasisSafeZoneBar(
-                currentVal = current,
-                minVal = min,
-                maxVal = max,
+
+            DotMatrixDisplay(
+                text = valueString,
+                activeColor = defaultColor,
+                dotRadius = 1.3.dp,
+                dotSpacing = 0.9.dp,
+                showInactiveDots = false
+            )
+
+            DotMatrixBar(
+                value = current,
+                min = min,
+                max = max,
                 safeMin = safeMin,
                 safeMax = safeMax,
+                defaultColor = defaultColor,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
+
             Text(safeRangeText, fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
         }
     }
 }
 
 @Composable
-fun HeaderStatBox(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
+fun MatrixHeaderStatBox(
+    icon: ImageVector,
+    label: String,
+    valueText: String,
+    unit: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
@@ -473,16 +606,26 @@ fun HeaderStatBox(icon: ImageVector, label: String, value: String, modifier: Mod
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = BioCyan, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         Column {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall)
-            Text(value, fontFamily = FontFamily.Monospace, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                DotMatrixDisplay(
+                    text = valueText,
+                    activeColor = color,
+                    dotRadius = 1.3.dp,
+                    dotSpacing = 0.9.dp,
+                    showInactiveDots = false
+                )
+                Text(unit, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = BioTextMutedDim)
+            }
         }
     }
 }
 
 @Composable
-fun SecondaryStatBox(label: String, value: String, modifier: Modifier = Modifier) {
+fun MatrixSecondaryStat(label: String, value: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -499,7 +642,6 @@ fun SecondaryStatBox(label: String, value: String, modifier: Modifier = Modifier
 fun formatRuntime(sec: Long): String {
     val h = sec / 3600
     val m = (sec % 3600) / 60
-    val d = h / 24
-    val hh = h % 24
-    return "${d}d ${hh}h ${m}m"
+    val s = sec % 60
+    return String.format("%02d:%02d:%02d", h, m, s)
 }

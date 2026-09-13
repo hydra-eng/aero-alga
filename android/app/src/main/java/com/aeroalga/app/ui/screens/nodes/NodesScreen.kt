@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aeroalga.app.data.model.NodeDevice
 import com.aeroalga.app.data.repository.NodeRepository
+import com.aeroalga.app.ui.components.DotMatrixDisplay
 import com.aeroalga.app.ui.theme.*
 
 @Composable
@@ -40,7 +41,8 @@ fun NodesScreen(
             FloatingActionButton(
                 onClick = { showAddDialog = true },
                 containerColor = BioLime,
-                contentColor = BioBackground
+                contentColor = BioBackground,
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Node")
             }
@@ -55,36 +57,33 @@ fun NodesScreen(
         ) {
             Column {
                 Text(
-                    text = "AeroAlga Fleet",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = BioTextPrimary
+                    text = "AEROALGA FLEET",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = BioTextPrimary,
+                    letterSpacing = 1.sp
                 )
                 Text(
-                    text = "REGISTERED HARDWARE NODES · ACTIVE MESH",
+                    text = "REGISTERED HARDWARE NODES · 2.4GHz MESH",
                     style = MaterialTheme.typography.labelSmall,
                     color = BioTextMuted
                 )
             }
 
-            if (nodes.isEmpty()) {
-                // Fallback display if network has not discovered nodes yet
-                val defaultNodes = listOf(
+            val displayNodes = if (nodes.isEmpty()) {
+                listOf(
                     NodeDevice("node-01", "Bioreactor Alpha", "Main Atrium", "ONLINE", "192.168.1.101", "2.0.0-esp32"),
                     NodeDevice("node-02", "Bioreactor Beta", "Research Lab 3", "ONLINE", "192.168.1.102", "2.0.0-esp32")
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(defaultNodes) { node ->
-                        NodeCardItem(node, activeNodeId == node.id) {
-                            repository.switchNode(node.id)
-                        }
-                    }
-                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(nodes) { node ->
-                        NodeCardItem(node, activeNodeId == node.id) {
-                            repository.switchNode(node.id)
-                        }
+                nodes
+            }
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(displayNodes) { node ->
+                    MatrixNodeCardItem(node, activeNodeId == node.id) {
+                        repository.switchNode(node.id)
                     }
                 }
             }
@@ -98,13 +97,21 @@ fun NodesScreen(
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Connect New AeroAlga Node", style = MaterialTheme.typography.headlineMedium, fontSize = 16.sp) },
+            title = {
+                Text(
+                    "CONNECT NEW HARDWARE NODE",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BioTextPrimary
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = newId,
                         onValueChange = { newId = it },
-                        label = { Text("Node ID (e.g. node-03)") },
+                        label = { Text("Node ID (e.g. node-03)", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BioLime,
                             unfocusedBorderColor = BioBorderSoft
@@ -113,7 +120,7 @@ fun NodesScreen(
                     OutlinedTextField(
                         value = newName,
                         onValueChange = { newName = it },
-                        label = { Text("Friendly Name") },
+                        label = { Text("Friendly Name", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BioLime,
                             unfocusedBorderColor = BioBorderSoft
@@ -122,7 +129,7 @@ fun NodesScreen(
                     OutlinedTextField(
                         value = newLoc,
                         onValueChange = { newLoc = it },
-                        label = { Text("Location") },
+                        label = { Text("Location", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BioLime,
                             unfocusedBorderColor = BioBorderSoft
@@ -139,12 +146,12 @@ fun NodesScreen(
                         }
                     }
                 ) {
-                    Text("Connect", color = BioLime, fontWeight = FontWeight.Bold)
+                    Text("CONNECT", color = BioLime, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel", color = BioTextMuted)
+                    Text("CANCEL", color = BioTextMuted, fontFamily = FontFamily.Monospace)
                 }
             },
             containerColor = BioSurface,
@@ -154,7 +161,7 @@ fun NodesScreen(
 }
 
 @Composable
-fun NodeCardItem(node: NodeDevice, isActive: Boolean, onClick: () -> Unit) {
+fun MatrixNodeCardItem(node: NodeDevice, isActive: Boolean, onClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = if (isActive) BioSurfaceVariant else BioSurface),
@@ -183,7 +190,7 @@ fun NodeCardItem(node: NodeDevice, isActive: Boolean, onClick: () -> Unit) {
                         .size(42.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(BioBackground)
-                        .border(1.dp, BioBorderSoft, RoundedCornerShape(10.dp)),
+                        .border(1.dp, if (isActive) BioLime else BioBorderSoft, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -195,8 +202,8 @@ fun NodeCardItem(node: NodeDevice, isActive: Boolean, onClick: () -> Unit) {
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(node.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                    Text("${node.id} · ${node.location}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
+                    Text(node.name, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("${node.id.uppercase()} · ${node.location}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
                     Text("IP: ${node.ipAddress} · FW: ${node.firmwareVersion}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = BioTextMutedDim)
                 }
             }

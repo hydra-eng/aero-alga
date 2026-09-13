@@ -7,8 +7,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aeroalga.app.data.repository.NodeRepository
+import com.aeroalga.app.ui.components.DotMatrixBar
+import com.aeroalga.app.ui.components.DotMatrixDisplay
 import com.aeroalga.app.ui.components.DualTrendLineChart
 import com.aeroalga.app.ui.theme.*
 
@@ -52,12 +54,15 @@ fun AnalyticsScreen(
         // HEADER
         Column {
             Text(
-                text = "Analytics & Circular Economy",
-                style = MaterialTheme.typography.headlineMedium,
-                color = BioTextPrimary
+                text = "MATRIX ANALYTICS",
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = BioTextPrimary,
+                letterSpacing = 1.sp
             )
             Text(
-                text = "NODE: $activeNode · HISTORICAL RECOVERY",
+                text = "NODE: $activeNode · CIRCULAR BIO-ECONOMY",
                 style = MaterialTheme.typography.labelSmall,
                 color = BioTextMuted
             )
@@ -81,10 +86,10 @@ fun AnalyticsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("24H TELEMETRY TREND", style = MaterialTheme.typography.labelSmall)
-                        Text("CO₂ Capture vs. Biomass Density", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("24H INTEGRATION PROFILE", style = MaterialTheme.typography.labelSmall)
+                        Text("CO₂ Capture vs. Biomass Density", fontFamily = FontFamily.Monospace, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
-                    Icon(Icons.Default.ShowChart, contentDescription = null, tint = BioTextMuted)
+                    Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null, tint = BioTextMuted)
                 }
 
                 // Legend
@@ -95,15 +100,15 @@ fun AnalyticsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(BioLime))
-                        Text("CO₂ reduction %", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
+                        Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(BioLime))
+                        Text("CO₂ FIX %", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioLime)
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(BioCyan))
-                        Text("Turbidity (NTU)", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
+                        Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(BioCyan))
+                        Text("TURBIDITY NTU", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioCyan)
                     }
                 }
 
@@ -132,28 +137,29 @@ fun AnalyticsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("CIRCULAR ECONOMY", style = MaterialTheme.typography.labelSmall)
-                        Text("Yield & Resource Recovery", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("CIRCULAR MATRIX", style = MaterialTheme.typography.labelSmall)
+                        Text("Yield & Nutrient Extraction", fontFamily = FontFamily.Monospace, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                     Icon(Icons.Default.Autorenew, contentDescription = null, tint = BioTextMuted)
                 }
 
-                // 2x2 Yield Grid
+                // 2x2 Matrix Yield Grid
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    YieldMetricBox(
-                        title = "Treated Volume",
-                        value = "${telemetry.cumulativeVolumeL.toInt()} L",
-                        subtitle = "cumulative throughput",
+                    MatrixYieldMetricBox(
+                        title = "Treated Air Volume",
+                        valueString = "${telemetry.cumulativeVolumeL.toInt()} L",
+                        subtitle = "CUMULATIVE THROUGHPUT",
+                        activeColor = BioTextPrimary,
                         modifier = Modifier.weight(1f)
                     )
-                    YieldMetricBox(
+                    MatrixYieldMetricBox(
                         title = "CO₂ Sequestered",
-                        value = "${String.format("%.2f", telemetry.co2SequesteredKg)} kg",
-                        subtitle = "1.83 kg / kg biomass",
-                        highlightColor = BioLime,
+                        valueString = "${String.format("%.2f", telemetry.co2SequesteredKg)} KG",
+                        subtitle = "1.83 KG/KG BIOMASS",
+                        activeColor = BioLime,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -162,26 +168,27 @@ fun AnalyticsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    YieldMetricBox(
+                    MatrixYieldMetricBox(
                         title = "Carbon Credits",
-                        value = "${String.format("%.4f", telemetry.carbonCreditsT)} t",
-                        subtitle = "tCO2e accrued",
-                        highlightColor = BioCyan,
+                        valueString = "${String.format("%.4f", telemetry.carbonCreditsT)} T",
+                        subtitle = "tCO2e ACCRUED",
+                        activeColor = BioCyan,
                         modifier = Modifier.weight(1f)
                     )
-                    YieldMetricBox(
-                        title = "Biomass Yield",
-                        value = "${String.format("%.2f", telemetry.biomassAccumKg)} kg",
-                        subtitle = "dry harvested weight",
+                    MatrixYieldMetricBox(
+                        title = "Biomass Harvested",
+                        valueString = "${String.format("%.2f", telemetry.biomassAccumKg)} KG",
+                        subtitle = "DRY WEIGHT ACCUM",
+                        activeColor = BioLime,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Wastewater Nutrient Recovery
+                // Wastewater Nutrient Recovery (Segmented LED Bars)
                 HorizontalDivider(color = BioBorderSoft)
 
                 Text(
-                    text = "WASTEWATER NUTRIENT REMOVAL",
+                    text = "WASTEWATER NUTRIENT REMOVAL MATRIX",
                     style = MaterialTheme.typography.labelSmall
                 )
 
@@ -191,14 +198,21 @@ fun AnalyticsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Nitrogen removal", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = BioTextMuted)
-                        Text("${String.format("%.1f", telemetry.nRemovalPct)}%", fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("NITROGEN (N) RECOVERY", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
+                        DotMatrixDisplay(
+                            text = "${String.format("%.1f", telemetry.nRemovalPct)}%",
+                            activeColor = BioLime,
+                            dotRadius = 1.1.dp,
+                            dotSpacing = 0.8.dp,
+                            showInactiveDots = false
+                        )
                     }
-                    LinearProgressIndicator(
-                        progress = { (telemetry.nRemovalPct / 100f).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = BioLime,
-                        trackColor = BioSurfaceVariant
+                    DotMatrixBar(
+                        value = telemetry.nRemovalPct,
+                        min = 0f,
+                        max = 100f,
+                        segmentCount = 24,
+                        defaultColor = BioLime
                     )
                 }
 
@@ -208,21 +222,28 @@ fun AnalyticsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Phosphorus removal", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = BioTextMuted)
-                        Text("${String.format("%.1f", telemetry.pRemovalPct)}%", fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("PHOSPHORUS (P) RECOVERY", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = BioTextMuted)
+                        DotMatrixDisplay(
+                            text = "${String.format("%.1f", telemetry.pRemovalPct)}%",
+                            activeColor = BioCyan,
+                            dotRadius = 1.1.dp,
+                            dotSpacing = 0.8.dp,
+                            showInactiveDots = false
+                        )
                     }
-                    LinearProgressIndicator(
-                        progress = { (telemetry.pRemovalPct / 100f).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = BioCyan,
-                        trackColor = BioSurfaceVariant
+                    DotMatrixBar(
+                        value = telemetry.pRemovalPct,
+                        min = 0f,
+                        max = 100f,
+                        segmentCount = 24,
+                        defaultColor = BioCyan
                     )
                 }
 
                 Text(
-                    text = "Target ≥ 90% reduction via dual-algal bio-absorption",
+                    text = "TARGET THRESHOLD ≥ 85.0% BIO-REDUCTION",
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     color = BioTextMutedDim
                 )
             }
@@ -231,11 +252,11 @@ fun AnalyticsScreen(
 }
 
 @Composable
-fun YieldMetricBox(
+fun MatrixYieldMetricBox(
     title: String,
-    value: String,
+    valueString: String,
     subtitle: String,
-    highlightColor: androidx.compose.ui.graphics.Color = BioTextPrimary,
+    activeColor: androidx.compose.ui.graphics.Color = BioTextPrimary,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -247,7 +268,15 @@ fun YieldMetricBox(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(title.uppercase(), style = MaterialTheme.typography.labelSmall)
-        Text(value, fontFamily = FontFamily.Monospace, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = highlightColor)
-        Text(subtitle, fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = BioTextMutedDim)
+        Spacer(modifier = Modifier.height(2.dp))
+        DotMatrixDisplay(
+            text = valueString,
+            activeColor = activeColor,
+            dotRadius = 1.2.dp,
+            dotSpacing = 0.8.dp,
+            showInactiveDots = false
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(subtitle, fontFamily = FontFamily.Monospace, fontSize = 8.sp, color = BioTextMutedDim)
     }
 }

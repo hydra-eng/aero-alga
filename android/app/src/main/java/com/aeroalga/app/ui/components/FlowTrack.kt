@@ -14,18 +14,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.unit.dp
-import com.aeroalga.app.ui.theme.BioBorderSoft
 import com.aeroalga.app.ui.theme.BioCyan
+import com.aeroalga.app.ui.theme.BioLedOff
+import kotlin.math.abs
 
+/**
+ * Animated Dot-Matrix Conduit with traveling LED photon clusters
+ */
 @Composable
 fun AnimatedFlowTrack(
     modifier: Modifier = Modifier,
     color: Color = BioCyan,
     durationMs: Int = 2200
 ) {
-    val transition = rememberInfiniteTransition(label = "flow_track")
+    val transition = rememberInfiniteTransition(label = "matrix_flow_track")
     val progress by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -41,29 +44,40 @@ fun AnimatedFlowTrack(
             .fillMaxWidth()
             .height(10.dp)
     ) {
-        val width = size.width
-        val y = size.height / 2
+        val totalWidth = size.width
+        val cy = size.height / 2f
+        val dotRadius = 1.8f
+        val dotSpacing = 8f
+        val numDots = (totalWidth / dotSpacing).toInt()
 
-        // Dotted pipe track
-        drawLine(
-            color = BioBorderSoft,
-            start = Offset(0f, y),
-            end = Offset(width, y),
-            strokeWidth = 2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f)
-        )
+        val runnerCenterPx = progress * totalWidth
+        val clusterRadiusPx = 36f
 
-        // Animated particle runner
-        val runnerX = progress * width
-        drawCircle(
-            color = color.copy(alpha = 0.35f),
-            radius = 5.dp.toPx(),
-            center = Offset(runnerX, y)
-        )
-        drawCircle(
-            color = color,
-            radius = 3.dp.toPx(),
-            center = Offset(runnerX, y)
-        )
+        for (i in 0 until numDots) {
+            val cx = i * dotSpacing + (dotSpacing / 2f)
+            val distance = abs(cx - runnerCenterPx)
+
+            if (distance < clusterRadiusPx) {
+                val intensity = (1f - (distance / clusterRadiusPx)).coerceIn(0f, 1f)
+                // Glow halo
+                drawCircle(
+                    color = color.copy(alpha = intensity * 0.45f),
+                    radius = dotRadius * 2.2f,
+                    center = Offset(cx, cy)
+                )
+                // Core
+                drawCircle(
+                    color = color.copy(alpha = intensity.coerceAtLeast(0.3f)),
+                    radius = dotRadius * (1f + intensity * 0.6f),
+                    center = Offset(cx, cy)
+                )
+            } else {
+                drawCircle(
+                    color = BioLedOff,
+                    radius = dotRadius * 0.8f,
+                    center = Offset(cx, cy)
+                )
+            }
+        }
     }
 }

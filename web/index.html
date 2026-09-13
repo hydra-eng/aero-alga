@@ -3,326 +3,1014 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#070E0C">
-<title>AeroAlga BDPA-v2 · Telemetry Portal</title>
+<meta name="theme-color" content="#060C0A">
+<title>AeroAlga BDPA-v2 · Dot Matrix Telemetry</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#070e0c;
-    --surface:#0f1913;
-    --surface-2:#142019;
-    --border:#213026;
-    --border-soft:#1a2620;
-    --text:#e7f3ea;
-    --muted:#7e9c8c;
-    --muted-dim:#5a7267;
-    --lime:#a6ff4d;
-    --lime-dim:#5c7a3a;
-    --cyan:#3fe8d4;
-    --warn:#ffb454;
-    --danger:#ff6b5e;
+  :root {
+    --bg: #050B08;
+    --surface: #0B1611;
+    --surface-2: #102018;
+    --surface-3: #172A21;
+    --border: #1E382A;
+    --border-soft: #162B20;
+    --matrix-grid: rgba(63, 232, 212, 0.04);
+    --matrix-led-off: #132219;
+    --matrix-led-off-dark: #0D1912;
+    --text: #E5F6EC;
+    --muted: #79A38B;
+    --muted-dim: #4B6E5B;
+    --lime: #A6FF4D;
+    --lime-glow: rgba(166, 255, 77, 0.45);
+    --cyan: #3FE8D4;
+    --cyan-glow: rgba(63, 232, 212, 0.45);
+    --warn: #FFB454;
+    --warn-glow: rgba(255, 180, 84, 0.45);
+    --danger: #FF5E5E;
+    --danger-glow: rgba(255, 94, 94, 0.45);
   }
-  *{-webkit-tap-highlight-color:transparent;}
-  html,body{background:var(--bg);}
-  body{
-    font-family:'Inter',system-ui,sans-serif;
-    color:var(--text);
-    padding-top:env(safe-area-inset-top);
-    padding-bottom:env(safe-area-inset-bottom);
+
+  * { -webkit-tap-highlight-color: transparent; }
+  
+  html, body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
   }
-  .font-display{font-family:'Space Grotesk',sans-serif;}
-  .font-mono{font-family:'IBM Plex Mono',monospace;}
-  .bg-noise{
-    background-image:
-      radial-gradient(circle at 15% 8%, rgba(166,255,77,0.05), transparent 40%),
-      radial-gradient(circle at 90% 90%, rgba(63,232,212,0.05), transparent 40%);
+
+  /* Authentic Dot-Matrix Canvas Background Grid */
+  .bg-dot-matrix {
+    background-color: var(--bg);
+    background-image: 
+      radial-gradient(circle, var(--matrix-grid) 1.5px, transparent 1.5px),
+      radial-gradient(circle at 10% 10%, rgba(166,255,77,0.06), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(63,232,212,0.06), transparent 45%);
+    background-size: 16px 16px, 100% 100%, 100% 100%;
   }
-  .card{ background:var(--surface); border:1px solid var(--border); border-radius:18px; }
-  .card-inset{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:14px; }
-  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--muted); }
-  .hairline{ border-top:1px solid var(--border-soft); }
-  .pulse-dot{ position:relative; width:8px; height:8px; border-radius:50%; background:var(--lime); }
-  .pulse-dot::after{
-    content:''; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--lime);
-    animation:pulseRing 1.8s cubic-bezier(0.2,0.6,0.4,1) infinite;
+
+  .font-dot {
+    font-family: 'Doto', 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
   }
-  @keyframes pulseRing{ 0%{ transform:scale(0.5); opacity:0.9; } 80%{ transform:scale(2.2); opacity:0; } 100%{ opacity:0; } }
-  .flow-track{
-    position:relative; height:2px;
-    background-image:linear-gradient(to right, var(--border-soft) 0 6px, transparent 6px 12px);
-    background-size:12px 2px; background-repeat:repeat-x;
+  .font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* Hardware Chassis Enclosure */
+  .matrix-chassis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    position: relative;
+    overflow: hidden;
   }
-  .flow-runner{
-    position:absolute; top:-3px; width:8px; height:8px; border-radius:50%;
-    background:var(--cyan); box-shadow:0 0 8px 1px rgba(63,232,212,0.7);
-    animation:flowMove 2.4s linear infinite;
+  .matrix-chassis::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(166, 255, 77, 0.2), transparent);
   }
-  @keyframes flowMove{ 0%{ left:0%; opacity:0; } 8%{ opacity:1; } 92%{ opacity:1; } 100%{ left:100%; opacity:0; } }
-  .ring-wrap{ position:relative; width:64px; height:64px; }
-  .ring-wrap svg{ transform:rotate(-90deg); }
-  .ring-track{ fill:none; stroke:var(--border-soft); stroke-width:5; }
-  .ring-value{ fill:none; stroke-linecap:round; stroke-width:5; transition:stroke-dashoffset 0.6s ease; }
-  .range-track{ position:relative; height:6px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); }
-  .range-safe{ position:absolute; top:0; bottom:0; background:rgba(166,255,77,0.16); border-radius:99px; }
-  .range-marker{ position:absolute; top:50%; width:10px; height:10px; border-radius:50%; transform:translate(-50%,-50%); border:2px solid var(--bg); transition:left 0.4s ease; }
-  .toggle{ width:52px; height:30px; border-radius:99px; background:var(--surface-2); border:1px solid var(--border-soft); position:relative; cursor:pointer; transition:background 0.25s ease; }
-  .toggle .knob{ position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%; background:var(--muted-dim); transition:left 0.25s ease, background 0.25s ease; }
-  .toggle.on{ background:rgba(166,255,77,0.14); border-color:var(--lime-dim); }
-  .toggle.on .knob{ left:24px; background:var(--lime); box-shadow:0 0 10px rgba(166,255,77,0.5); }
-  input[type="range"]{ -webkit-appearance:none; height:6px; border-radius:99px; background:var(--surface-2); }
-  input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:var(--bg); border:3px solid var(--cyan); cursor:pointer; }
+
+  .matrix-bezel {
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Animated LED Dot Marquee Ticker */
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+  }
+  .ticker-move {
+    display: inline-block;
+    animation: tickerAnim 22s linear infinite;
+  }
+  @keyframes tickerAnim {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
+  }
+
+  /* Pulse Status Dot */
+  .led-pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 10px var(--lime);
+    position: relative;
+  }
+  .led-pulse::after {
+    content: '';
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 1px solid var(--lime);
+    animation: ledPulse 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  }
+  @keyframes ledPulse {
+    0% { transform: scale(0.5); opacity: 1; }
+    80% { transform: scale(2.4); opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* Discrete LED Dot Bargraph */
+  .dot-meter {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding: 3px 0;
+  }
+  .dot-pip {
+    flex: 1;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--matrix-led-off);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .dot-pip.lit-lime {
+    background: var(--lime);
+    box-shadow: 0 0 6px var(--lime-glow);
+  }
+  .dot-pip.lit-cyan {
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan-glow);
+  }
+  .dot-pip.lit-warn {
+    background: var(--warn);
+    box-shadow: 0 0 6px var(--warn-glow);
+  }
+  .dot-pip.lit-danger {
+    background: var(--danger);
+    box-shadow: 0 0 6px var(--danger-glow);
+  }
+
+  /* Matrix Flow Track */
+  .matrix-flow-track {
+    position: relative;
+    height: 10px;
+    background: repeating-linear-gradient(90deg, var(--matrix-led-off) 0, var(--matrix-led-off) 3px, transparent 3px, transparent 8px);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .matrix-flow-cluster {
+    position: absolute;
+    top: 1px;
+    width: 28px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, transparent, var(--cyan), #fff);
+    box-shadow: 0 0 12px var(--cyan);
+    animation: flowCluster 2.2s linear infinite;
+  }
+  @keyframes flowCluster {
+    0% { left: -30px; opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+  .matrix-flow-cluster.slow {
+    animation-duration: 3.4s;
+    background: linear-gradient(90deg, transparent, var(--lime), #fff);
+    box-shadow: 0 0 12px var(--lime);
+  }
+
+  /* Range input slider styling */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    height: 8px; border-radius: 4px;
+    background: var(--surface-3);
+    outline: none;
+    background-image: linear-gradient(var(--lime), var(--lime));
+    background-repeat: no-repeat;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 24px; height: 24px; border-radius: 4px;
+    background: #000;
+    border: 2px solid var(--lime);
+    box-shadow: 0 0 10px var(--lime-glow);
+    cursor: pointer;
+  }
+
+  /* Hardware Toggle Switch */
+  .matrix-toggle {
+    width: 54px; height: 28px;
+    border-radius: 6px;
+    background: var(--matrix-led-off-dark);
+    border: 1px solid var(--border);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .matrix-toggle .switch-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    background: var(--muted-dim);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .matrix-toggle.active {
+    background: rgba(166, 255, 77, 0.15);
+    border-color: var(--lime);
+    box-shadow: 0 0 10px var(--lime-glow);
+  }
+  .matrix-toggle.active .switch-thumb {
+    left: 28px;
+    background: var(--lime);
+    box-shadow: 0 0 8px var(--lime);
+  }
+
+  /* LED Glow Filter effects */
+  .led-glow-lime {
+    color: var(--lime);
+    text-shadow: 0 0 8px var(--lime-glow);
+  }
+  .led-glow-cyan {
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+  }
+  .led-glow-warn {
+    color: var(--warn);
+    text-shadow: 0 0 8px var(--warn-glow);
+  }
+
+  /* Hide scrollbar */
+  ::-webkit-scrollbar { display: none; }
 </style>
 </head>
-<body class="bg-noise min-h-screen pb-12">
+<body class="bg-dot-matrix min-h-screen pb-12">
 
-<div class="max-w-md mx-auto px-4">
-  <!-- HEADER -->
-  <header class="sticky top-0 z-40 pt-4 pb-3 -mx-4 px-4 bg-[#070e0c]/90 backdrop-blur-md">
+<!-- TOP HARDWARE MARQUEE TICKER -->
+<div class="border-b border-[var(--border-soft)] bg-[#050B08]/90 backdrop-blur-md sticky top-0 z-50">
+  <div class="max-w-xl mx-auto px-4 py-2 flex items-center justify-between text-xs font-mono">
+    <div class="flex items-center gap-2">
+      <span class="led-pulse"></span>
+      <span class="font-dot text-[13px] tracking-wider text-[var(--lime)]">NODE-01</span>
+      <span class="text-[10px] text-[var(--muted-dim)]">· 2.4GHz MESH</span>
+    </div>
+    <div class="ticker-wrap flex-1 max-w-[240px] mx-3 text-[10px] text-[var(--muted)]">
+      <div class="ticker-move">
+        <span>AEROALGA BDPA-V2 MATRIX TELEMETRY · CO₂ FIXATION ACTIVE · PARTICULATE IONIZATION OPTIMAL · CULTURE PH BALANCED · </span>
+        <span>AEROALGA BDPA-V2 MATRIX TELEMETRY · CO₂ FIXATION ACTIVE · PARTICULATE IONIZATION OPTIMAL · CULTURE PH BALANCED · </span>
+      </div>
+    </div>
+    <div id="conn-badge" class="px-2 py-0.5 rounded bg-[#102018] border border-[var(--border-soft)] text-[10px] font-mono text-[var(--cyan)]">
+      WS LINKED
+    </div>
+  </div>
+</div>
+
+<div class="max-w-xl mx-auto px-4 pt-4 space-y-4">
+
+  <!-- HEADER HERO: FLOW & SYSTEM SPECS -->
+  <header class="matrix-chassis p-4">
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="font-display font-semibold text-[18px]">AeroAlga BDPA-v2</h1>
-        <p id="node-badge" class="eyebrow mt-0.5">NODE-01 · LIVE WEBSOCKET LINK</p>
+        <p class="eyebrow">BIO-DIGITAL PERFORMANCE ARCHITECTURE</p>
+        <h1 class="font-dot text-2xl tracking-wide mt-1 text-[var(--text)]">AEROALGA <span class="text-[var(--lime)]">v2.0</span></h1>
       </div>
-      <div id="conn-pill" class="flex items-center gap-1.5 card-inset px-2.5 py-1.5">
-        <span class="pulse-dot"></span>
-        <span id="conn-text" class="font-mono text-[11px] text-[#a6ff4d]">LIVE</span>
+      <div class="text-right">
+        <p class="eyebrow">SYSTEM RUNTIME</p>
+        <p id="hdr-runtime" class="font-dot text-sm text-[var(--cyan)] mt-1">312:18:40</p>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-2.5 mt-3">
-      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
-        <i data-lucide="wind" class="w-4 h-4 text-[#3fe8d4]"></i>
+    <!-- MAIN MATRIX DISPENSER READOUT -->
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div class="matrix-bezel p-3 flex items-center gap-3">
+        <i data-lucide="wind" class="w-5 h-5 text-[var(--cyan)] shrink-0"></i>
         <div>
-          <p class="eyebrow">Flow Rate</p>
-          <p id="hdr-flow" class="font-mono text-sm font-medium">0.0 L/min</p>
+          <p class="eyebrow">AERATION FLOW</p>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="hdr-flow" class="font-dot text-xl text-[var(--cyan)]">28.4</span>
+            <span class="font-mono text-xs text-[var(--muted)]">L/min</span>
+          </div>
         </div>
       </div>
-      <div class="card-inset px-3 py-2 flex items-center gap-2.5">
-        <i data-lucide="timer" class="w-4 h-4 text-[#3fe8d4]"></i>
+      <div class="matrix-bezel p-3 flex items-center gap-3">
+        <i data-lucide="gauge" class="w-5 h-5 text-[var(--lime)] shrink-0"></i>
         <div>
-          <p class="eyebrow">Runtime</p>
-          <p id="hdr-runtime" class="font-mono text-sm font-medium">0d 0h 0m</p>
+          <p class="eyebrow">PUMP LOAD</p>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="hdr-pump-pct" class="font-dot text-xl text-[var(--lime)]">55%</span>
+            <span class="font-mono text-xs text-[var(--muted)]">PWM</span>
+          </div>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="space-y-4 mt-2">
-    <!-- PM CARD -->
-    <section class="card p-4">
-      <div class="flex items-center justify-between mb-3">
-        <div>
-          <p class="eyebrow">Particulate Filtration</p>
-          <h2 class="font-display font-semibold text-[15px]">PM2.5 / PM10</h2>
-        </div>
-        <i data-lucide="filter" class="w-4 h-4 text-[#7e9c8c]"></i>
+  <!-- SECTION 1: PARTICULATE FILTRATION (DUAL PMS5003) -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="filter" class="w-4 h-4 text-[var(--lime)]"></i>
+        <h2 class="font-dot text-base tracking-wide text-[var(--text)]">PARTICULATE DYNAMICS · PM2.5 / PM10</h2>
       </div>
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <div class="card-inset px-3 py-2.5">
-          <p class="eyebrow">Inlet</p>
-          <p id="pm25-in" class="font-mono text-lg font-medium">0.0</p>
-          <p class="font-mono text-[10px] text-[#5a7267]">µg/m³ PM2.5</p>
+      <span class="font-mono text-[10px] text-[var(--muted-dim)]">DUAL LASER UART</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 items-center">
+      <!-- INLET -->
+      <div class="matrix-bezel p-3 text-center">
+        <p class="eyebrow">INLET</p>
+        <p id="pm25-in" class="font-dot text-2xl text-[var(--warn)] mt-1">42.8</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">µg/m³ PM2.5</p>
+        <div class="border-t border-[var(--border-soft)] mt-2 pt-1 flex justify-between font-mono text-[10px] text-[var(--muted)]">
+          <span>PM10</span>
+          <span id="pm10-in">69.2</span>
         </div>
-        <div class="ring-wrap shrink-0">
-          <svg width="64" height="64" viewBox="0 0 64 64">
-            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
-            <circle id="pm-ring" class="ring-value" cx="32" cy="32" r="26" stroke="#a6ff4d" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
-          </svg>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <span id="pm-eff" class="font-mono text-[13px] font-semibold text-[#a6ff4d]">0%</span>
+      </div>
+
+      <!-- DISCRETE LED RADIAL GAUGE -->
+      <div class="flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 flex items-center justify-center">
+          <svg id="pm-matrix-ring" class="w-20 h-20" viewBox="0 0 100 100"></svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="pm-eff" class="font-dot text-base text-[var(--lime)]">82%</span>
+            <span class="font-mono text-[8px] text-[var(--muted-dim)]">η_PM</span>
           </div>
         </div>
-        <div class="card-inset px-3 py-2.5 text-right">
-          <p class="eyebrow">Outlet</p>
-          <p id="pm25-out" class="font-mono text-lg font-medium">0.0</p>
-          <p class="font-mono text-[10px] text-[#5a7267]">µg/m³ PM2.5</p>
-        </div>
+        <p class="font-mono text-[9px] text-[var(--lime)] mt-1 tracking-widest">CAPTURE</p>
       </div>
-      <div class="flow-track my-3"><span class="flow-runner"></span></div>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="flex justify-between card-inset px-3 py-2"><span class="eyebrow">PM10 in</span><span id="pm10-in" class="font-mono text-xs">0 µg/m³</span></div>
-        <div class="flex justify-between card-inset px-3 py-2"><span class="eyebrow">PM10 out</span><span id="pm10-out" class="font-mono text-xs">0 µg/m³</span></div>
-      </div>
-    </section>
 
-    <!-- CO2 CARD -->
-    <section class="card p-4">
-      <div class="flex items-center justify-between mb-3">
-        <div>
-          <p class="eyebrow">Gaseous Exchange</p>
-          <h2 class="font-display font-semibold text-[15px]">CO₂ Fixation</h2>
+      <!-- OUTLET -->
+      <div class="matrix-bezel p-3 text-center">
+        <p class="eyebrow">OUTLET</p>
+        <p id="pm25-out" class="font-dot text-2xl text-[var(--lime)] mt-1">7.7</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">µg/m³ PM2.5</p>
+        <div class="border-t border-[var(--border-soft)] mt-2 pt-1 flex justify-between font-mono text-[10px] text-[var(--muted)]">
+          <span>PM10</span>
+          <span id="pm10-out">12.4</span>
         </div>
-        <i data-lucide="leaf" class="w-4 h-4 text-[#7e9c8c]"></i>
       </div>
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <div class="card-inset px-3 py-2.5">
-          <p class="eyebrow">Inlet</p>
-          <p id="co2-in" class="font-mono text-lg font-medium">0</p>
-          <p class="font-mono text-[10px] text-[#5a7267]">ppm CO₂</p>
+    </div>
+
+    <!-- PARTICLE FLOW CONDUIT -->
+    <div class="mt-3">
+      <div class="matrix-flow-track">
+        <span class="matrix-flow-cluster"></span>
+      </div>
+      <div class="flex justify-between font-mono text-[9px] text-[var(--muted-dim)] mt-1">
+        <span>INLET AIR STREAM</span>
+        <span id="pm-formula">η = ((42.8 - 7.7) / 42.8) × 100 = 82.0%</span>
+        <span>CLEAN RETENTION</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: GASEOUS CO2 FIXATION (DUAL MH-Z19B NDIR) -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="leaf" class="w-4 h-4 text-[var(--cyan)]"></i>
+        <h2 class="font-dot text-base tracking-wide text-[var(--text)]">CARBON CAPTURE · CO₂ NDIR</h2>
+      </div>
+      <span class="font-mono text-[10px] text-[var(--muted-dim)]">NDIR 5000PPM RANGE</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 items-center">
+      <!-- INLET -->
+      <div class="matrix-bezel p-3 text-center">
+        <p class="eyebrow">INLET</p>
+        <p id="co2-in" class="font-dot text-2xl text-[var(--warn)] mt-1">874</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">PPM CO₂</p>
+        <div class="border-t border-[var(--border-soft)] mt-2 pt-1 font-mono text-[10px] text-[var(--muted)]">
+          RAW AMBIENT
         </div>
-        <div class="ring-wrap shrink-0">
-          <svg width="64" height="64" viewBox="0 0 64 64">
-            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
-            <circle id="co2-ring" class="ring-value" cx="32" cy="32" r="26" stroke="#3fe8d4" stroke-dasharray="163.4" stroke-dashoffset="163.4"></circle>
-          </svg>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <span id="co2-eff" class="font-mono text-[13px] font-semibold text-[#3fe8d4]">0%</span>
+      </div>
+
+      <!-- DISCRETE LED RADIAL GAUGE -->
+      <div class="flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 flex items-center justify-center">
+          <svg id="co2-matrix-ring" class="w-20 h-20" viewBox="0 0 100 100"></svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="co2-eff" class="font-dot text-base text-[var(--cyan)]">34%</span>
+            <span class="font-mono text-[8px] text-[var(--muted-dim)]">η_CO₂</span>
           </div>
         </div>
-        <div class="card-inset px-3 py-2.5 text-right">
-          <p class="eyebrow">Outlet</p>
-          <p id="co2-out" class="font-mono text-lg font-medium">0</p>
-          <p class="font-mono text-[10px] text-[#5a7267]">ppm CO₂</p>
+        <p class="font-mono text-[9px] text-[var(--cyan)] mt-1 tracking-widest">FIXATION</p>
+      </div>
+
+      <!-- OUTLET -->
+      <div class="matrix-bezel p-3 text-center">
+        <p class="eyebrow">OUTLET</p>
+        <p id="co2-out" class="font-dot text-2xl text-[var(--cyan)] mt-1">576</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">PPM CO₂</p>
+        <div class="border-t border-[var(--border-soft)] mt-2 pt-1 font-mono text-[10px] text-[var(--muted)]">
+          PURIFIED DISCHARGE
         </div>
       </div>
-      <div class="flow-track my-3"><span class="flow-runner" style="background:var(--lime); animation-delay:0.8s;"></span></div>
-    </section>
+    </div>
 
-    <!-- BIO-HOMEOSTASIS -->
-    <section>
-      <p class="eyebrow mb-2">Biological Homeostasis</p>
-      <div class="grid grid-cols-2 gap-2.5">
-        <div class="card p-3">
-          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="flask-conical" class="w-3.5 h-3.5 text-[#a6ff4d]"></i><p class="eyebrow">pH Level</p></div>
-          <p id="ph-val" class="font-mono text-xl font-semibold">7.60</p>
-          <div class="range-track mt-2.5"><div class="range-safe" style="left:40%; width:16%;"></div><div id="ph-marker" class="range-marker bg-[#a6ff4d]" style="left:45%;"></div></div>
-          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 7.2–8.5</p>
+    <!-- GAS FLOW CONDUIT -->
+    <div class="mt-3">
+      <div class="matrix-flow-track">
+        <span class="matrix-flow-cluster slow"></span>
+      </div>
+      <div class="flex justify-between font-mono text-[9px] text-[var(--muted-dim)] mt-1">
+        <span>ALGAL ABSORPTION</span>
+        <span id="co2-formula">Δ = 298 PPM NET REMOVED</span>
+        <span>EXHAUST PLENUM</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: BIOLOGICAL HOMEOSTASIS (DOT MATRIX LED METERS) -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="activity" class="w-4 h-4 text-[var(--lime)]"></i>
+        <h2 class="font-dot text-base tracking-wide text-[var(--text)]">HOMEOSTASIS MATRIX · LIVE CULTURE</h2>
+      </div>
+      <span class="font-mono text-[10px] text-[var(--muted-dim)]">MULTI-PROBE ADC</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <!-- pH Level -->
+      <div class="matrix-bezel p-3">
+        <div class="flex justify-between items-center">
+          <span class="eyebrow">pH LEVEL</span>
+          <span id="ph-badge" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[var(--matrix-led-off)] text-[var(--lime)]">STABLE</span>
         </div>
-        <div class="card p-3">
-          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="thermometer" class="w-3.5 h-3.5 text-[#ffb454]"></i><p class="eyebrow">Water Temp</p></div>
-          <p id="temp-val" class="font-mono text-xl font-semibold">24.0°C</p>
-          <div class="range-track mt-2.5"><div class="range-safe" style="left:35%; width:28%;"></div><div id="temp-marker" class="range-marker bg-[#a6ff4d]" style="left:50%;"></div></div>
-          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 20–28°C</p>
-        </div>
-        <div class="card p-3">
-          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="droplets" class="w-3.5 h-3.5 text-[#3fe8d4]"></i><p class="eyebrow">Turbidity</p></div>
-          <p id="ntu-val" class="font-mono text-xl font-semibold">260 NTU</p>
-          <div class="range-track mt-2.5"><div class="range-safe" style="left:25%; width:50%;"></div><div id="ntu-marker" class="range-marker bg-[#a6ff4d]" style="left:43%;"></div></div>
-          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">biomass proxy</p>
-        </div>
-        <div class="card p-3">
-          <div class="flex items-center gap-1.5 mb-1"><i data-lucide="waves" class="w-3.5 h-3.5 text-[#a6ff4d]"></i><p class="eyebrow">Dissolved O₂</p></div>
-          <p id="do-val" class="font-mono text-xl font-semibold">7.4 mg/L</p>
-          <div class="range-track mt-2.5"><div class="range-safe" style="left:42%; width:28%;"></div><div id="do-marker" class="range-marker bg-[#a6ff4d]" style="left:52%;"></div></div>
-          <p class="font-mono text-[9px] mt-1.5 text-[#5a7267]">safe 6–10 mg/L</p>
+        <p id="ph-val" class="font-dot text-2xl text-[var(--lime)] mt-1">7.64</p>
+        <div id="ph-meter" class="dot-meter mt-2" data-dots="18"></div>
+        <div class="flex justify-between font-mono text-[8px] text-[var(--muted-dim)] mt-1">
+          <span>4.0</span>
+          <span class="text-[var(--lime)]">SAFE 7.2–8.5</span>
+          <span>12.0</span>
         </div>
       </div>
-    </section>
 
-    <!-- ACTUATION CONTROLS -->
-    <section class="card p-4">
-      <div class="flex items-center justify-between mb-3">
+      <!-- Water Temp -->
+      <div class="matrix-bezel p-3">
+        <div class="flex justify-between items-center">
+          <span class="eyebrow">WATER TEMP</span>
+          <span id="temp-badge" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[var(--matrix-led-off)] text-[var(--cyan)]">OPTIMAL</span>
+        </div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="temp-val" class="font-dot text-2xl text-[var(--cyan)]">23.8</span>
+          <span class="font-mono text-xs text-[var(--muted)]">°C</span>
+        </div>
+        <div id="temp-meter" class="dot-meter mt-2" data-dots="18"></div>
+        <div class="flex justify-between font-mono text-[8px] text-[var(--muted-dim)] mt-1">
+          <span>10°</span>
+          <span class="text-[var(--cyan)]">SAFE 20–28°C</span>
+          <span>38°</span>
+        </div>
+      </div>
+
+      <!-- Turbidity NTU -->
+      <div class="matrix-bezel p-3">
+        <div class="flex justify-between items-center">
+          <span class="eyebrow">TURBIDITY</span>
+          <span class="text-[9px] font-mono text-[var(--muted)]">BIOMASS</span>
+        </div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="ntu-val" class="font-dot text-2xl text-[var(--text)]">278</span>
+          <span class="font-mono text-xs text-[var(--muted)]">NTU</span>
+        </div>
+        <div id="ntu-meter" class="dot-meter mt-2" data-dots="18"></div>
+        <div class="flex justify-between font-mono text-[8px] text-[var(--muted-dim)] mt-1">
+          <span>0</span>
+          <span class="text-[var(--muted)]">HARVEST 450+</span>
+          <span>600</span>
+        </div>
+      </div>
+
+      <!-- Dissolved O2 -->
+      <div class="matrix-bezel p-3">
+        <div class="flex justify-between items-center">
+          <span class="eyebrow">DISSOLVED O₂</span>
+          <span class="text-[9px] font-mono text-[var(--lime)]">ACTIVE</span>
+        </div>
+        <div class="flex items-baseline gap-1 mt-1">
+          <span id="do-val" class="font-dot text-2xl text-[var(--lime)]">7.6</span>
+          <span class="font-mono text-xs text-[var(--muted)]">mg/L</span>
+        </div>
+        <div id="do-meter" class="dot-meter mt-2" data-dots="18"></div>
+        <div class="flex justify-between font-mono text-[8px] text-[var(--muted-dim)] mt-1">
+          <span>0</span>
+          <span class="text-[var(--lime)]">SAFE 6–10</span>
+          <span>14</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: 24H MATRIX TREND TELEMETRY (CANVAS) -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-2">
+      <div>
+        <p class="eyebrow">24H INTEGRATION PROFILE</p>
+        <h2 class="font-dot text-base text-[var(--text)] mt-0.5">CO₂ REDUCTION VS. BIOMASS ACCUMULATION</h2>
+      </div>
+      <i data-lucide="line-chart" class="w-4 h-4 text-[var(--muted)]"></i>
+    </div>
+
+    <div class="flex items-center gap-4 my-2 text-xs font-mono">
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded bg-[var(--lime)] shadow-[0_0_6px_var(--lime)]"></span>
+        <span class="text-[var(--lime)]">CO₂ FIX %</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded bg-[var(--cyan)] shadow-[0_0_6px_var(--cyan)]"></span>
+        <span class="text-[var(--cyan)]">TURBIDITY NTU</span>
+      </div>
+    </div>
+
+    <div class="relative w-full h-[200px] mt-2">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </section>
+
+  <!-- SECTION 5: CIRCULAR ECONOMY & NUTRIENT RECOVERY -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="recycle" class="w-4 h-4 text-[var(--lime)]"></i>
+        <h2 class="font-dot text-base tracking-wide text-[var(--text)]">CIRCULAR YIELD & NUTRIENT BALANCE</h2>
+      </div>
+      <span class="font-mono text-[10px] text-[var(--muted-dim)]">1.83 KG CO₂/KG BIO</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="matrix-bezel p-3">
+        <p class="eyebrow">TREATED AIR VOLUME</p>
+        <p id="yield-volume" class="font-dot text-xl text-[var(--text)] mt-1">48,420 L</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">CUMULATIVE THROUGHPUT</p>
+      </div>
+      <div class="matrix-bezel p-3">
+        <p class="eyebrow">CO₂ SEQUESTERED</p>
+        <p id="yield-co2" class="font-dot text-xl text-[var(--lime)] mt-1">11.84 kg</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">BOUND TO BIOMASS</p>
+      </div>
+      <div class="matrix-bezel p-3">
+        <p class="eyebrow">CARBON CREDITS</p>
+        <p id="yield-credits" class="font-dot text-xl text-[var(--cyan)] mt-1">0.0118 t</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">ACCRUED tCO₂e</p>
+      </div>
+      <div class="matrix-bezel p-3">
+        <p class="eyebrow">BIOMASS ACCUMULATED</p>
+        <p id="yield-biomass" class="font-dot text-xl text-[var(--text)] mt-1">6.47 kg</p>
+        <p class="font-mono text-[9px] text-[var(--muted-dim)] mt-0.5">DRY SPIRULINA EXTRACT</p>
+      </div>
+    </div>
+
+    <!-- Segmented Nutrient Recovery Meters -->
+    <div class="border-t border-[var(--border-soft)] mt-4 pt-3 space-y-3 font-mono">
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-[var(--muted)]">NITROGEN RECOVERY (N)</span>
+          <span id="n-val" class="font-dot text-[var(--lime)]">89.4%</span>
+        </div>
+        <div id="n-meter" class="dot-meter" data-dots="24"></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-[var(--muted)]">PHOSPHORUS RECOVERY (P)</span>
+          <span id="p-val" class="font-dot text-[var(--cyan)]">87.1%</span>
+        </div>
+        <div id="p-meter" class="dot-meter" data-dots="24"></div>
+      </div>
+      <p class="font-mono text-[9px] text-[var(--muted-dim)]">TARGET RECOVERY THRESHOLD ≥ 85.0%</p>
+    </div>
+  </section>
+
+  <!-- SECTION 6: HARDWARE ACTUATION MATRIX -->
+  <section class="matrix-chassis p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-[var(--cyan)]"></i>
+        <h2 class="font-dot text-base tracking-wide text-[var(--text)]">ACTUATION CONTROL INTERFACE</h2>
+      </div>
+      <span class="font-mono text-[10px] text-[var(--muted-dim)]">PWM TIMERS 5kHz</span>
+    </div>
+
+    <!-- PHOTONIC LED TOGGLE -->
+    <div class="matrix-bezel p-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-lucide="sun" class="w-5 h-5 text-[var(--warn)]"></i>
         <div>
-          <p class="eyebrow">Actuation</p>
-          <h2 class="font-display font-semibold text-[15px]">Direct Node Control</h2>
+          <p class="text-sm font-semibold tracking-wide">PHOTONIC LED ASSIST</p>
+          <p class="font-mono text-[10px] text-[var(--muted-dim)]">660nm / 450nm PAR OPTIMIZED LIGHTING</p>
         </div>
-        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-[#7e9c8c]"></i>
       </div>
-      <div class="flex items-center justify-between card-inset px-3.5 py-3">
-        <div class="flex items-center gap-2.5">
-          <i data-lucide="sun" class="w-4 h-4 text-[#ffb454]"></i>
-          <div><p class="text-[13px] font-medium">Photonic LED Assist</p><p class="font-mono text-[10px] text-[#5a7267]">photosynthesis boost</p></div>
+      <button id="led-toggle" class="matrix-toggle" aria-label="Toggle Photonic LED Assist">
+        <span class="switch-thumb"></span>
+      </button>
+    </div>
+
+    <!-- FLUIDIC PUMP PWM SLIDER -->
+    <div class="matrix-bezel p-3.5 mt-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="gauge" class="w-4 h-4 text-[var(--cyan)]"></i>
+          <span class="text-sm font-semibold tracking-wide">FLUIDIC CIRCULATION PUMP</span>
         </div>
-        <button id="led-toggle" class="toggle" aria-pressed="false"><span class="knob"></span></button>
+        <span id="pump-display" class="font-dot text-base text-[var(--cyan)]">55% PWM</span>
       </div>
-      <div class="card-inset px-3.5 py-3.5 mt-2.5">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2"><i data-lucide="gauge" class="w-4 h-4 text-[#3fe8d4]"></i><p class="text-[13px] font-medium">Fluidic Pump Speed</p></div>
-          <span id="pump-val" class="font-mono text-sm font-semibold text-[#3fe8d4]">55%</span>
-        </div>
-        <input id="pump-slider" type="range" min="10" max="100" value="55" class="w-full">
+      <input id="pump-slider" type="range" min="10" max="100" value="55" step="1" class="w-full cursor-pointer">
+      <div class="flex justify-between font-mono text-[9px] text-[var(--muted-dim)] mt-1.5">
+        <span>10% · RESTING CIRCULATION</span>
+        <span>100% · VORTEX SCRUBBING</span>
       </div>
-    </section>
-  </main>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="text-center font-mono text-[10px] text-[var(--muted-dim)] pt-2 pb-6 space-y-1">
+    <p>AEROALGA BDPA-v2 · BIO-DIGITAL ARCHITECTURE</p>
+    <p>ESP32 FREERTOS CORE · TELEMETRY INGEST MATRIX · HYDRA ENG</p>
+  </footer>
+
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
-  const nodeId = "node-01";
-  const apiBase = window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000";
-  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsHost = window.location.host.includes(":8000") ? window.location.host : "localhost:8000";
-  const wsUrl = `${wsProtocol}//${wsHost}/api/v1/ws/stream/${nodeId}`;
 
-  const setRing = (el, pct) => {
-    const c = 163.4;
-    el.style.strokeDashoffset = (c * (1 - Math.max(0, Math.min(100, pct)) / 100)).toFixed(1);
+  // ---------- STATE ----------
+  const state = {
+    pumpSpeed: 55,
+    ledOn: false,
+    runtimeSec: 312 * 3600 + 18 * 60 + 40,
+    cumulativeVolumeL: 48420,
+    biomassKg: 6.47,
+    creditsT: 0.0118,
+
+    pm25In: 42.8, pm25Out: 7.7,
+    pm10In: 69.2, pm10Out: 12.4,
+    co2In: 874, co2Out: 576,
+
+    ph: 7.64,
+    waterTemp: 23.8,
+    ntu: 278,
+    doLevel: 7.6,
+
+    nRemoval: 89.4,
+    pRemoval: 87.1,
   };
 
-  const updateUI = (data) => {
-    document.getElementById('hdr-flow').textContent = (data.flow_rate || 0).toFixed(1) + ' L/min';
-    const s = data.runtime_sec || 0;
-    const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const d = Math.floor(h / 24);
-    document.getElementById('hdr-runtime').textContent = `${d}d ${h % 24}h ${m}m`;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const jitter = (amt) => (Math.random() - 0.5) * 2 * amt;
+  const fmt = (v, d = 1) => Number(v).toFixed(d);
 
-    document.getElementById('pm25-in').textContent = (data.pm25_in || 0).toFixed(1);
-    document.getElementById('pm25-out').textContent = (data.pm25_out || 0).toFixed(1);
-    document.getElementById('pm10-in').textContent = (data.pm10_in || 0).toFixed(1) + ' µg/m³';
-    document.getElementById('pm10-out').textContent = (data.pm10_out || 0).toFixed(1) + ' µg/m³';
-    document.getElementById('pm-eff').textContent = Math.round(data.pm_efficiency || 0) + '%';
-    setRing(document.getElementById('pm-ring'), data.pm_efficiency || 0);
+  // ---------- DISCRETE LED RADIAL GAUGE RENDERER ----------
+  function buildMatrixRing(svgId, totalPips = 32, radius = 38, cx = 50, cy = 50) {
+    const svg = document.getElementById(svgId);
+    svg.innerHTML = '';
+    const pips = [];
+    const step = (Math.PI * 2) / totalPips;
+    const startAngle = -Math.PI / 2; // start from 12 o'clock
 
-    document.getElementById('co2-in').textContent = Math.round(data.co2_in || 0);
-    document.getElementById('co2-out').textContent = Math.round(data.co2_out || 0);
-    document.getElementById('co2-eff').textContent = Math.round(data.co2_efficiency || 0) + '%';
-    setRing(document.getElementById('co2-ring'), data.co2_efficiency || 0);
+    for (let i = 0; i < totalPips; i++) {
+      const angle = startAngle + i * step;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
 
-    document.getElementById('ph-val').textContent = (data.ph || 7.6).toFixed(2);
-    document.getElementById('temp-val').textContent = (data.water_temp || 24.0).toFixed(1) + '°C';
-    document.getElementById('ntu-val').textContent = Math.round(data.turbidity_ntu || 250) + ' NTU';
-    document.getElementById('do-val').textContent = (data.dissolved_oxygen || 7.4).toFixed(1) + ' mg/L';
-  };
-
-  // Connect live WebSocket
-  let ws;
-  function connectWebSocket() {
-    ws = new WebSocket(wsUrl);
-    ws.onopen = () => {
-      document.getElementById('conn-text').textContent = 'LIVE';
-      document.getElementById('conn-text').style.color = 'var(--lime)';
-    };
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        updateUI(payload);
-      } catch (err) { console.error(err); }
-    };
-    ws.onclose = () => {
-      document.getElementById('conn-text').textContent = 'RETRY';
-      document.getElementById('conn-text').style.color = 'var(--warn)';
-      setTimeout(connectWebSocket, 3000);
-    };
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', x.toFixed(2));
+      circle.setAttribute('cy', y.toFixed(2));
+      circle.setAttribute('r', '3');
+      circle.setAttribute('fill', 'var(--matrix-led-off)');
+      circle.setAttribute('class', 'transition-all duration-300');
+      svg.appendChild(circle);
+      pips.push(circle);
+    }
+    return pips;
   }
-  connectWebSocket();
 
-  // Actuation Event Handlers
+  const pmPips = buildMatrixRing('pm-matrix-ring', 32, 38);
+  const co2Pips = buildMatrixRing('co2-matrix-ring', 32, 38);
+
+  function updateMatrixRing(pips, pct, activeColor, glowColor) {
+    const total = pips.length;
+    const litCount = Math.round((clamp(pct, 0, 100) / 100) * total);
+    pips.forEach((pip, idx) => {
+      if (idx < litCount) {
+        pip.setAttribute('fill', activeColor);
+        pip.style.filter = `drop-shadow(0 0 3px ${glowColor})`;
+      } else {
+        pip.setAttribute('fill', 'var(--matrix-led-off)');
+        pip.style.filter = 'none';
+      }
+    });
+  }
+
+  // ---------- SEGMENTED LED DOT METERS ----------
+  function initDotMeters() {
+    document.querySelectorAll('.dot-meter').forEach(meter => {
+      const count = parseInt(meter.dataset.dots || '18', 10);
+      meter.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'dot-pip';
+        meter.appendChild(pip);
+      }
+    });
+  }
+  initDotMeters();
+
+  function updateDotMeter(meterId, pct, colorType = 'lime') {
+    const meter = document.getElementById(meterId);
+    if (!meter) return;
+    const pips = meter.querySelectorAll('.dot-pip');
+    const total = pips.length;
+    const litCount = Math.round((clamp(pct, 0, 100) / 100) * total);
+
+    pips.forEach((pip, idx) => {
+      pip.className = 'dot-pip';
+      if (idx < litCount) {
+        pip.classList.add(`lit-${colorType}`);
+      }
+    });
+  }
+
+  // ---------- RECALCULATE TELEMETRY ----------
+  function computeFlowRate() {
+    const base = 5 + (state.pumpSpeed / 100) * 45;
+    return base * (state.ledOn ? 1.03 : 1);
+  }
+
+  function recalc() {
+    const flow = computeFlowRate();
+
+    // PM Efficiency
+    const pmEffBase = 84 - (state.pumpSpeed - 50) * 0.12 + (state.ledOn ? 2.5 : 0);
+    const pmEff = clamp(pmEffBase + jitter(1.0), 60, 96);
+    state.pm25In = clamp(42.8 + jitter(1.5), 20, 90);
+    state.pm25Out = state.pm25In * (1 - pmEff / 100);
+    state.pm10In = state.pm25In * 1.62;
+    state.pm10Out = state.pm25Out * 1.62;
+
+    // CO2 Fixation
+    const co2EffBase = 28 + (state.ntu / 600) * 20 + (state.ledOn ? 4 : 0) - (state.pumpSpeed - 50) * 0.04;
+    const co2Eff = clamp(co2EffBase + jitter(1.2), 15, 60);
+    state.co2In = clamp(874 + jitter(15), 650, 1100);
+    state.co2Out = state.co2In * (1 - co2Eff / 100);
+
+    // Bio Probes
+    state.ph = clamp(state.ph + jitter(0.015), 6.5, 9.0);
+    state.waterTemp = clamp(state.waterTemp + jitter(0.05) + (state.ledOn ? 0.01 : 0), 18, 32);
+    state.ntu = clamp(state.ntu + jitter(1.0) + 0.02, 100, 550);
+    state.doLevel = clamp(state.doLevel + jitter(0.04) + (co2Eff > 30 ? 0.01 : -0.01), 4, 12);
+
+    state.nRemoval = clamp(state.nRemoval + jitter(0.1), 70, 98);
+    state.pRemoval = clamp(state.pRemoval + jitter(0.1), 70, 98);
+
+    // Cumulative Accumulation
+    state.cumulativeVolumeL += flow * (2 / 60);
+    const co2Diff = (state.co2In - state.co2Out);
+    const growth = (co2Diff / 900) * (flow / 30) * 0.00045;
+    state.biomassKg += Math.max(0, growth);
+    state.creditsT = (state.biomassKg * 1.83) / 1000;
+
+    return { flow, pmEff, co2Eff };
+  }
+
+  function formatRuntime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return `${String(h).padStart(3,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  // ---------- RENDER UI ----------
+  function render(flow, pmEff, co2Eff) {
+    document.getElementById('hdr-runtime').textContent = formatRuntime(state.runtimeSec);
+    document.getElementById('hdr-flow').textContent = fmt(flow, 1);
+    document.getElementById('hdr-pump-pct').textContent = `${state.pumpSpeed}%`;
+
+    // PM Card
+    document.getElementById('pm25-in').textContent = fmt(state.pm25In, 1);
+    document.getElementById('pm25-out').textContent = fmt(state.pm25Out, 1);
+    document.getElementById('pm10-in').textContent = fmt(state.pm10In, 1);
+    document.getElementById('pm10-out').textContent = fmt(state.pm10Out, 1);
+    document.getElementById('pm-eff').textContent = `${Math.round(pmEff)}%`;
+    document.getElementById('pm-formula').textContent =
+      `η = ((${fmt(state.pm25In,1)} - ${fmt(state.pm25Out,1)}) / ${fmt(state.pm25In,1)}) × 100 = ${fmt(pmEff,1)}%`;
+    updateMatrixRing(pmPips, pmEff, 'var(--lime)', 'var(--lime-glow)');
+
+    // CO2 Card
+    document.getElementById('co2-in').textContent = Math.round(state.co2In);
+    document.getElementById('co2-out').textContent = Math.round(state.co2Out);
+    document.getElementById('co2-eff').textContent = `${Math.round(co2Eff)}%`;
+    document.getElementById('co2-formula').textContent = `Δ = ${Math.round(state.co2In - state.co2Out)} PPM NET FIXATION`;
+    updateMatrixRing(co2Pips, co2Eff, 'var(--cyan)', 'var(--cyan-glow)');
+
+    // Homeostasis Card
+    document.getElementById('ph-val').textContent = fmt(state.ph, 2);
+    const phPct = ((state.ph - 4) / 8) * 100;
+    const phSafe = state.ph >= 7.2 && state.ph <= 8.5;
+    updateDotMeter('ph-meter', phPct, phSafe ? 'lime' : 'warn');
+    document.getElementById('ph-badge').textContent = phSafe ? 'STABLE' : 'WARN';
+    document.getElementById('ph-badge').style.color = phSafe ? 'var(--lime)' : 'var(--warn)';
+
+    document.getElementById('temp-val').textContent = fmt(state.waterTemp, 1);
+    const tempPct = ((state.waterTemp - 10) / 28) * 100;
+    const tempSafe = state.waterTemp >= 20 && state.waterTemp <= 28;
+    updateDotMeter('temp-meter', tempPct, tempSafe ? 'cyan' : 'warn');
+
+    document.getElementById('ntu-val').textContent = Math.round(state.ntu);
+    const ntuPct = (state.ntu / 600) * 100;
+    updateDotMeter('ntu-meter', ntuPct, 'lime');
+
+    document.getElementById('do-val').textContent = fmt(state.doLevel, 1);
+    const doPct = (state.doLevel / 14) * 100;
+    updateDotMeter('do-meter', doPct, state.doLevel >= 6 ? 'lime' : 'danger');
+
+    // Circular Economy
+    document.getElementById('yield-volume').textContent = `${Math.round(state.cumulativeVolumeL).toLocaleString()} L`;
+    document.getElementById('yield-co2').textContent = `${fmt(state.biomassKg * 1.83, 2)} kg`;
+    document.getElementById('yield-credits').textContent = `${fmt(state.creditsT, 4)} t`;
+    document.getElementById('yield-biomass').textContent = `${fmt(state.biomassKg, 2)} kg`;
+
+    document.getElementById('n-val').textContent = `${fmt(state.nRemoval, 1)}%`;
+    document.getElementById('p-val').textContent = `${fmt(state.pRemoval, 1)}%`;
+    updateDotMeter('n-meter', state.nRemoval, 'lime');
+    updateDotMeter('p-meter', state.pRemoval, 'cyan');
+
+    // Controls display
+    document.getElementById('pump-display').textContent = `${state.pumpSpeed}% PWM`;
+    document.getElementById('pump-slider').style.backgroundSize = `${((state.pumpSpeed - 10) / 90) * 100}% 100%`;
+  }
+
+  // ---------- 24H TREND CHART ----------
+  const hours = Array.from({length: 24}, (_, i) => `${String(i).padStart(2,'0')}:00`);
+  let baseNtu = 160;
+  const ntuData = [];
+  const co2Data = [];
+  for (let i = 0; i < 24; i++) {
+    baseNtu += 4 + jitter(2);
+    baseNtu = clamp(baseNtu, 140, 400);
+    ntuData.push(baseNtu);
+    const co2Val = 24 + (baseNtu / 400) * 22 + jitter(1.5);
+    co2Data.push(clamp(co2Val, 18, 55));
+  }
+
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: 'CO2 FIX %',
+          data: co2Data,
+          borderColor: '#A6FF4D',
+          backgroundColor: 'rgba(166, 255, 77, 0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y'
+        },
+        {
+          label: 'NTU',
+          data: ntuData,
+          borderColor: '#3FE8D4',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0B1611',
+          borderColor: '#1E382A',
+          borderWidth: 1,
+          titleFont: { family: 'IBM Plex Mono', size: 10 },
+          bodyFont: { family: 'IBM Plex Mono', size: 10 },
+          titleColor: '#E5F6EC',
+          bodyColor: '#A6FF4D',
+          padding: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30, 56, 42, 0.4)' },
+          ticks: { color: '#4B6E5B', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 6 }
+        },
+        y: {
+          position: 'left',
+          grid: { color: 'rgba(30, 56, 42, 0.4)' },
+          ticks: { color: '#A6FF4D', font: { family: 'IBM Plex Mono', size: 9 }, callback: v => v + '%' },
+          min: 0, max: 70
+        },
+        y1: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { color: '#3FE8D4', font: { family: 'IBM Plex Mono', size: 9 } },
+          min: 0, max: 500
+        }
+      }
+    }
+  });
+
+  // ---------- CONTROLS LISTENER ----------
   const pumpSlider = document.getElementById('pump-slider');
-  pumpSlider.addEventListener('change', () => {
-    const val = parseInt(pumpSlider.value, 10);
-    document.getElementById('pump-val').textContent = val + '%';
-    fetch(`${apiBase}/api/v1/actuation/${nodeId}/control`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pump_speed_pct: val })
-    }).catch(console.error);
+  pumpSlider.addEventListener('input', () => {
+    state.pumpSpeed = parseInt(pumpSlider.value, 10);
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
   });
 
   const ledToggle = document.getElementById('led-toggle');
-  let ledState = false;
   ledToggle.addEventListener('click', () => {
-    ledState = !ledState;
-    ledToggle.classList.toggle('on', ledState);
-    fetch(`${apiBase}/api/v1/actuation/${nodeId}/control`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ led_assist_on: ledState })
-    }).catch(console.error);
+    state.ledOn = !state.ledOn;
+    ledToggle.classList.toggle('active', state.ledOn);
+    const { flow, pmEff, co2Eff } = recalc();
+    render(flow, pmEff, co2Eff);
   });
+
+  // ---------- REAL BACKEND WEBSOCKET / SIMULATION TICK ----------
+  let wsConnected = false;
+  function connectWebSocket() {
+    const loc = window.location;
+    const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = (loc.hostname && loc.hostname !== '') ? loc.host : 'localhost:8000';
+    const wsUrl = `${wsProto}//${host}/api/v1/ws/stream/Node-01`;
+
+    try {
+      const ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        wsConnected = true;
+        document.getElementById('conn-badge').textContent = 'LIVE WS';
+        document.getElementById('conn-badge').className = 'px-2 py-0.5 rounded bg-[#102018] border border-[var(--lime)] text-[10px] font-mono text-[var(--lime)]';
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.metrics) {
+            const m = data.metrics;
+            if (m.pm25_inlet !== undefined) state.pm25In = m.pm25_inlet;
+            if (m.pm25_outlet !== undefined) state.pm25Out = m.pm25_outlet;
+            if (m.co2_inlet !== undefined) state.co2In = m.co2_inlet;
+            if (m.co2_outlet !== undefined) state.co2Out = m.co2_outlet;
+            if (m.ph !== undefined) state.ph = m.ph;
+            if (m.water_temp !== undefined) state.waterTemp = m.water_temp;
+            if (m.turbidity_ntu !== undefined) state.ntu = m.turbidity_ntu;
+            if (m.dissolved_oxygen !== undefined) state.doLevel = m.dissolved_oxygen;
+            if (m.flow_rate_lpm !== undefined) {
+              // updated from server
+            }
+            const { flow, pmEff, co2Eff } = recalc();
+            render(flow, pmEff, co2Eff);
+          }
+        } catch (e) {}
+      };
+      ws.onclose = () => {
+        wsConnected = false;
+        document.getElementById('conn-badge').textContent = 'SIM TICK';
+        document.getElementById('conn-badge').className = 'px-2 py-0.5 rounded bg-[#102018] border border-[var(--border-soft)] text-[10px] font-mono text-[var(--cyan)]';
+        setTimeout(connectWebSocket, 4000);
+      };
+      ws.onerror = () => {
+        ws.close();
+      };
+    } catch (e) {
+      wsConnected = false;
+    }
+  }
+
+  connectWebSocket();
+
+  // 2s Simulation tick fallback
+  setInterval(() => {
+    state.runtimeSec += 2;
+    if (!wsConnected) {
+      const { flow, pmEff, co2Eff } = recalc();
+      render(flow, pmEff, co2Eff);
+    }
+  }, 2000);
+
+  // Initial paint
+  const { flow, pmEff, co2Eff } = recalc();
+  render(flow, pmEff, co2Eff);
 });
 </script>
 </body>
